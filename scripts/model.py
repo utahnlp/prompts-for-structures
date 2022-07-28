@@ -37,7 +37,10 @@ class PromptModel():
         for ix, prompt in enumerate(prompts):
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
             with torch.no_grad():
-                outputs = self.model.generate(input_ids.to(device))
+                outputs = self.model.generate(input_ids.to(device), num_return_sequences=5, num_beams=5, output_scores=True, return_dict_in_generate=True)
+            #print(outputs)
+            print(outputs.sequences_scores)
+            exit()
             print(f"Prompt :{prompt}")
             print(f"Gold: {gold[ix]}")
             print(f"Generation: {self.tokenizer.decode(outputs[0], skip_special_tokens=True)}")
