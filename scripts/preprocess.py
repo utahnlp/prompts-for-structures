@@ -23,7 +23,7 @@ def preprocess_wikisrl(filepath):
                 sent_id = split_data[0]
                 total_predicates = int(split_data[1])
             elif len(split_data) == 1:
-                sentence = line
+                sentence = line.strip("\n")
             elif len(split_data) == 3:
                 predicate = split_data[1]
             else:

@@ -1,5 +1,6 @@
 from utils import Config
 from preprocess import preprocess_file
+from prompts import generate_prompts
 
 from pathlib import Path
 import torch
@@ -22,13 +23,30 @@ class PromptModel():
 
 
     def init_model(self, model_name: str):
+        """ Initialize tokenizers and models Initialize tokenizers and models  
+        """
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
 
 
+    def generate(self):
+        """ Method to prepare prompts and generate.
+        """
+        prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
+        for ix, prompt in enumerate(prompts):
+            input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
+            with torch.no_grad():
+                outputs = self.model.generate(input_ids.to(device))
+            print(f"Prompt :{prompt}")
+            print(f"Gold: {gold[ix]}")
+            print(f"Generation: {self.tokenizer.decode(outputs[0], skip_special_tokens=True)}")
+            print()
+            if ix == 50:
+                exit()
 
 
 if __name__ == "__main__":
     config = Config()
-    model = PromptModel(config) 
+    model = PromptModel(config)
+    model.generate()

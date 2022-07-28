@@ -91,6 +91,8 @@ scipy==1.5.4
     #   seaborn
 seaborn==0.11.2
     # via -r requirements.ini
+sentencepiece==0.1.96
+    # via -r requirements.ini
 six==1.16.0
     # via
     #   python-dateutil

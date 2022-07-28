@@ -20,6 +20,7 @@ class Config():
         self.data_file = config.get('Data','data_file')
         self.mode = config.get('Run','mode')
         self.model = config.get('Model','model')
+        self.prompt_type = config.get('Prompt','prompt_type')
 
 if __name__ == "__main__":
     conf = Config()
