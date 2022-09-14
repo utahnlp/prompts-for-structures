@@ -1,15 +1,23 @@
-from utils import Config
+from evaluate import evaluate
+from graph import construct_graph, Graph
+from utils import Config, analyse_beams
 from preprocess import preprocess_file
 from prompts import generate_prompts
 
+import pickle
 from pathlib import Path
 import torch
+from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from typing import Union
 
 GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+#device = "cpu"
 
+torch.manual_seed(2121)
+
+problematic_ix = [709,710,711,1219,1220,1221,1502,1503,2694,2695,2696,2697,2921,2922,2923,3263,3264,3265,3266,3267,3390,3405,3406,3459,3460,4214,4215,4216,4508,4509,4510]
 
 class PromptModel():
     def __init__(self, config: Config):
@@ -30,26 +38,85 @@ class PromptModel():
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
 
 
-    def generate(self):
+    def generate(self, beam_size=1, test_mode=False):
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
-        for ix, prompt in enumerate(prompts):
+        generation = []
+
+        for ix, prompt in tqdm(enumerate(prompts)):
+            #if ix not in problematic_ix:
+            #    continue
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
             with torch.no_grad():
-                outputs = self.model.generate(input_ids.to(device), num_return_sequences=5, num_beams=5, output_scores=True, return_dict_in_generate=True)
-            #print(outputs)
-            print(outputs.sequences_scores)
-            exit()
-            print(f"Prompt :{prompt}")
-            print(f"Gold: {gold[ix]}")
-            print(f"Generation: {self.tokenizer.decode(outputs[0], skip_special_tokens=True)}")
-            print()
-            if ix == 50:
-                exit()
+                outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True)
+        
+            if test_mode:
+                if ix == 20:
+                    break
+
+            # Storing top 10 sequences along with their scores 
+            prompt_gens = []
+            for seq_ix in range(beam_size):
+                seq_dict = {}
+                seq_dict["sentence"] = self.tokenizer.decode(outputs.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
+                seq_dict["score"] = outputs.sequences_scores[seq_ix].item()
+                prompt_gens.append(seq_dict)
+                
+            generation.append(prompt_gens)
+
+        return prompts, gold, generation
+
+
+
+    def constrained_inference(self, generations):
+        """ Constrained Inference Module
+        """
+        predicate = None
+        sentence = None
+        pred_gens = []
+        const_ans = []
+
+        cnt_ix = -1
+        for ix, row in self.data.iterrows():
+            #if ix not in problematic_ix:
+            #    continue
+            cnt_ix += 1
+            if predicate == None:
+                predicate = row["predicate"]
+                sentence = row["sentence"]
+
+            if predicate != row["predicate"]:
+                predicate = row["predicate"]
+                const_ans += construct_graph(sentence, pred_gens,ix)
+                sentence = row["sentence"]
+                pred_gens = []
+                    
+            pred_gens.append(generations[cnt_ix])
+           
+        const_ans += construct_graph(sentence, pred_gens,len(self.data))
+
+        return const_ans
+
 
 
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
-    model.generate()
+    _, gold, gens = model.generate(beam_size=20, test_mode=False)
+    
+    with open("output.bin", "wb") as output:
+        pickle.dump(gens, output)
+    const_ans = model.constrained_inference(gens)
+
+    
+    #analyse_beams(gold, gens, root_analysis=True)
+    
+    ## Unconstrained Evaluation
+    uncon_gens = [gen[0]["sentence"] for gen in gens]
+    evaluate(model.data, model.config, uncon_gens)
+
+    print("Constrained")
+    evaluate(model.data, model.config, const_ans)
+
+
