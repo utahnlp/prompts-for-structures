@@ -69,16 +69,18 @@ class PromptModel():
 
 
 
-    def constrained_inference(self, generations):
+    def constrained_inference(self, generations, sanity_check=False):
         """ Constrained Inference Module
         """
         predicate = None
         sentence = None
         pred_gens = []
         const_ans = []
+        gold_ans = []
+        invalid_gold = 0
 
         cnt_ix = -1
-        for ix, row in self.data.iterrows():
+        for ix, row in tqdm(self.data.iterrows()):
             #if ix not in problematic_ix:
             #    continue
             cnt_ix += 1
@@ -88,13 +90,21 @@ class PromptModel():
 
             if predicate != row["predicate"]:
                 predicate = row["predicate"]
-                const_ans += construct_graph(sentence, pred_gens,ix)
+                c_ans, g_inv = construct_graph(sentence, pred_gens,ix,gold_ans, sanity_check)
+                const_ans += c_ans
+                invalid_gold += g_inv
+
                 sentence = row["sentence"]
                 pred_gens = []
+                gold_ans = []
                     
             pred_gens.append(generations[cnt_ix])
+            gold_ans.append(row["answer"])
            
-        const_ans += construct_graph(sentence, pred_gens,len(self.data))
+        c_ans, g_inv = construct_graph(sentence, pred_gens,len(self.data), gold_ans, sanity_check)
+        const_ans += c_ans
+        invalid_gold += g_inv
+        print(f"# Gold answers not perfect sub-sequences: {invalid_gold}")
 
         return const_ans
 
@@ -103,11 +113,13 @@ class PromptModel():
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
-    _, gold, gens = model.generate(beam_size=20, test_mode=False)
+    #_, gold, gens = model.generate(beam_size=20, test_mode=False)
     
-    with open("output.bin", "wb") as output:
-        pickle.dump(gens, output)
-    const_ans = model.constrained_inference(gens)
+    #with open("output.bin", "wb") as output:
+    #    pickle.dump(gens, output)
+    with open("output.bin","rb") as data:
+        gens = pickle.load(data)
+    const_ans = model.constrained_inference(gens, sanity_check=False)
 
     
     #analyse_beams(gold, gens, root_analysis=True)

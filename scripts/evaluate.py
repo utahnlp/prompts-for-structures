@@ -8,15 +8,19 @@ def get_srl_stats(pred_golds, pred_gens, corr_qs, corr_qs_dep):
     roots_pred = []
 
     for ix, gold_ent in enumerate(pred_golds):
-        doc1 = nlp(gold_ent)
+        possb_ans = gold_ent.split(" ### ")
+        r_ans = []
+        for opt in possb_ans:
+            doc1 = nlp(opt)
+            for token in doc1:
+                if token.dep_ == "ROOT":
+                    r_ans.append(token.text)
+        roots_gold.append(r_ans)
+
         doc2 = nlp(pred_gens[ix])
-        for token in doc1:
-            if token.dep_ == "ROOT":
-                roots_gold.append(token.text)
         for token in doc2:
             if token.dep_ == "ROOT":
                 roots_pred.append(token.text)
-            
     # comp_corr is a flag to check if 
     # all arguments for a predicate were 
     # correctly extracted or not. 1 implies 
@@ -25,15 +29,23 @@ def get_srl_stats(pred_golds, pred_gens, corr_qs, corr_qs_dep):
     comp_corr_dep = 1
     
     for ix, gold_ent in enumerate(pred_golds):
-        if gold_ent == pred_gens[ix]:
-            corr_qs += 1
-        else:
+        exact_match = False
+        for g_ent in  gold_ent.split(" ### "):
+            if g_ent == pred_gens[ix]:
+                corr_qs += 1
+                exact_match = True
+                break
+        if not exact_match:
             comp_corr = 0
         
         try:
-            if roots_gold[ix] == roots_pred[ix]:
-                corr_qs_dep += 1
-            else:
+            root_match = False
+            for r_gold in roots_gold[ix]:
+                if r_gold == roots_pred[ix]:
+                    corr_qs_dep += 1
+                    root_match =True
+                    break
+            if not root_match:
                 comp_corr_dep = 0
         except IndexError:
             print(pred_golds)

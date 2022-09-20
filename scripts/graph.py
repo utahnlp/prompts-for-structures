@@ -175,7 +175,7 @@ def yens_ksp(g, source, dest, K=20):
 
 
 
-def construct_graph(sent, generations, inst_ix):
+def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False):
     tokens = sent.split()
     num_nodes = len(tokens) + 1 
 
@@ -188,6 +188,24 @@ def construct_graph(sent, generations, inst_ix):
         g.add_edges(ix, ix+1, null_wt, {"label":'O'})
     #g.add_edges(len(tokens), len(tokens)+1, null_wt, {"label":'O'})
 
+    gold_invalid = 0
+    gold_edge_meta = {}
+    for a_ix, ans in enumerate(gold_ans):
+        possb_ans = ans.split(" ### ")
+        match_flag = False
+        for opt in possb_ans:
+            match, s_ix , e_ix = subseq_match(opt.split(),tokens)
+            if match:
+                match_flag = True
+                if sanity:
+                    g.add_edges(s_ix, e_ix, 0, {"label":f"{a_ix+1}", "beam_pos":"gold"})
+                    gold_edge_meta[a_ix+1] = [s_ix, e_ix]
+        
+        if not match_flag:
+            gold_invalid += 1
+
+
+    
 
     # Adding all the argument edges for the beams generated
     for g_ix, gen_q in enumerate(generations):  #Loops over all the questions
@@ -207,12 +225,14 @@ def construct_graph(sent, generations, inst_ix):
                 # by node with index one less than the token location. This helps in 
                 # capturing span overlaps in cases like, e.g., when say a token x is the 
                 # last token in a span and the first one in another
-                g.add_edges(start_ix, end_ix, gen_q[0]["score"]-gen_q[beam_ix]["score"],{"label":f"{g_ix+1}", "beam_pos":beam_ix})
-    #g2 = Graph(g.V)
-    #print(g.shortestpath(1))
-    #print(g2.shortestpath(1))
-    #exit()
-    #try:
+                s_add = 0
+                if sanity:  # We increase the overall score by 1 if we want to sanity check with gold answers as highest
+                    s_add = 1
+                    if g_ix+1 in gold_edge_meta.keys():
+                        if gold_edge_meta[g_ix+1] == [start_ix,end_ix]:
+                            continue
+                g.add_edges(start_ix, end_ix, gen_q[0]["score"]-gen_q[beam_ix]["score"]+s_add,{"label":f"{g_ix+1}", "beam_pos":beam_ix})
+    
     sh_paths = yens_ksp(g,0,len(tokens))
     #except IndexError:
         #print("Error")
@@ -223,6 +243,8 @@ def construct_graph(sent, generations, inst_ix):
     def find_optimal_path(paths, num_ques):
         traversed = []
         valid = [1]*num_ques
+        best_partial_path = paths[0]
+        best_partial_cnt = 0
 
         for path in paths:
             counter = [0]*num_ques
@@ -232,8 +254,18 @@ def construct_graph(sent, generations, inst_ix):
                     counter[int(lab)-1] += 1
             if valid == counter:
                 return path
-    
-        return paths[0]
+            else:
+                single_check=True
+                for el in counter:
+                    if el not in [0,1]:
+                        single_check= False
+                        break
+                if single_check:
+                    if sum(counter) > best_partial_cnt:
+                        best_partial_cnt = sum(counter)
+                        best_partial_path = path 
+
+        return best_partial_path
     
     optimal_path = find_optimal_path(sh_paths,len(generations))
     
@@ -249,7 +281,14 @@ def construct_graph(sent, generations, inst_ix):
     
     ans = get_answers(optimal_path,len(generations), tokens)
 
-    return ans
+    #if ans != gold_ans and (gold_invalid==0):
+    #    print(ans)
+    #    print(gold_ans)
+    #    print()
+        #exit()
+
+
+    return ans, gold_invalid
 
 
 def construct_graph_old(sent, generations):
