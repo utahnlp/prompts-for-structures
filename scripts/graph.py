@@ -11,11 +11,15 @@ def subseq_match(subseq, sent):
     """ Subsequence Match
     """
     l = len(subseq)
-    
+    start_ix = []
+    end_ix = []
+    m_flag = False
     for i in range(len(sent)-l+1):
         if sent[i:i+l] == subseq:
-            return True, i, i+l
-    return False, None, None
+            m_flag = True 
+            start_ix.append(i)
+            end_ix.append(i+l)
+    return m_flag, start_ix, end_ix
 
 
 
@@ -131,7 +135,7 @@ class Graph:
 def yens_ksp(g, source, dest, K=20):
     sh_path_0, sh_dist= g.shortestpath(source)
     sh_paths = [sh_path_0]
-    
+     
     b = []
 
     for k in range(1,K+1):
@@ -146,6 +150,7 @@ def yens_ksp(g, source, dest, K=20):
             for path in sh_paths:
                 if root_path == path[:i]:
                     new_graph.remove_edge(path[i],path[i+1]) 
+                    
 
             for node in root_path:
                 if node[0] != spur_node[0]:
@@ -166,6 +171,9 @@ def yens_ksp(g, source, dest, K=20):
                 b.append((totalpath, root_dist+spur_dist))
         
         b.sort(key=lambda y: y[1])
+        #for p in b:
+        #    print(p)
+        #print("###############")
         if len(b) == 0:
             break
         sh_paths.append(b[0][0])
@@ -175,10 +183,13 @@ def yens_ksp(g, source, dest, K=20):
 
 
 
-def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False):
-    tokens = sent.split()
-    num_nodes = len(tokens) + 1 
-
+def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False, ans_span=[]):
+    if type(sent) != list:
+        tokens = sent.split()
+    else:
+        tokens = sent
+    num_nodes = len(tokens) + 2 #+1
+    
     g = Graph(num_nodes)
 
     null_wt = 0
@@ -186,54 +197,73 @@ def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False):
     ## Adding default edges
     for ix, tok in enumerate(tokens):
         g.add_edges(ix, ix+1, null_wt, {"label":'O'})
-    #g.add_edges(len(tokens), len(tokens)+1, null_wt, {"label":'O'})
+    g.add_edges(len(tokens), len(tokens)+1, null_wt, {"label":'O'})
 
     gold_invalid = 0
     gold_edge_meta = {}
     for a_ix, ans in enumerate(gold_ans):
+        #print(ans)
+        #print(tokens)
+        #print(ans_span)
         possb_ans = ans.split(" ### ")
         match_flag = False
-        for opt in possb_ans:
-            match, s_ix , e_ix = subseq_match(opt.split(),tokens)
+        for opt_ix, opt in enumerate(possb_ans):
+            if ans_span != []:
+                match = True
+                s_ix = [ans_span[a_ix][opt_ix][0]]
+                e_ix = [ans_span[a_ix][opt_ix][1]]
+            else:
+                match, s_ix , e_ix = subseq_match(opt.split(),tokens)
+            #print(opt)
+            #print(match)
+            #print(s_ix)
+            #print(e_ix)
+            #print()
             if match:
                 match_flag = True
                 if sanity:
-                    g.add_edges(s_ix, e_ix, 0, {"label":f"{a_ix+1}", "beam_pos":"gold"})
-                    gold_edge_meta[a_ix+1] = [s_ix, e_ix]
+                    for match_ix in range(len(s_ix)): 
+                        g.add_edges(s_ix[match_ix], e_ix[match_ix], 0, {"label":f"{a_ix+1}", "beam_pos":"gold"})
+                        gold_edge_meta[a_ix+1] = [s_ix[match_ix], e_ix[match_ix]]
         
         if not match_flag:
             gold_invalid += 1
-
-
     
-
     # Adding all the argument edges for the beams generated
     for g_ix, gen_q in enumerate(generations):  #Loops over all the questions
         for beam_ix in range(len(gen_q)):       #Loops over all the beams in the question
             # We consider only continuous spans for extraction
-            match, start_ix, end_ix = subseq_match(gen_q[beam_ix]["sentence"].split(), tokens)
+            match, s_ix, e_ix = subseq_match(gen_q[beam_ix]["sentence"].split(), tokens)
             # Considering matched subsequences
             #if match:
             #    print(tokens)
             #    print(gen_q[beam_ix]["sentence"].split())
             #    print(start_ix)
             #    print(end_ix)
-            #    print()
-                
+            #    print()     
             if match:
                 # Adding the argument edges. Note here that the starting node is defined
                 # by node with index one less than the token location. This helps in 
                 # capturing span overlaps in cases like, e.g., when say a token x is the 
                 # last token in a span and the first one in another
-                s_add = 0
-                if sanity:  # We increase the overall score by 1 if we want to sanity check with gold answers as highest
-                    s_add = 1
-                    if g_ix+1 in gold_edge_meta.keys():
-                        if gold_edge_meta[g_ix+1] == [start_ix,end_ix]:
-                            continue
-                g.add_edges(start_ix, end_ix, gen_q[0]["score"]-gen_q[beam_ix]["score"]+s_add,{"label":f"{g_ix+1}", "beam_pos":beam_ix})
-    
-    sh_paths = yens_ksp(g,0,len(tokens))
+                for match_ix in range(len(s_ix)):
+                    start_ix = s_ix[match_ix]
+                    end_ix = e_ix[match_ix]
+                    s_add = 0
+                    if sanity:  # We increase the overall score by 1 if we want to sanity check with gold answers as highest
+                        s_add = 1
+                        if g_ix+1 in gold_edge_meta.keys():
+                            if gold_edge_meta[g_ix+1] == [start_ix,end_ix]:
+                                continue
+                    g.add_edges(start_ix, end_ix, gen_q[0]["score"]-gen_q[beam_ix]["score"]+s_add,{"label":f"{g_ix+1}", "beam_pos":beam_ix})
+    try:
+        sh_paths = yens_ksp(g,0,len(tokens), K=20)
+    except IndexError:
+        print(tokens)
+        print(ans_span)
+        print(gold_ans)
+        print(g.graph)
+        exit()
     #except IndexError:
         #print("Error")
         #print(inst_ix)
@@ -264,9 +294,19 @@ def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False):
                     if sum(counter) > best_partial_cnt:
                         best_partial_cnt = sum(counter)
                         best_partial_path = path 
-
+        #print("Here") 
         return best_partial_path
     
+    #for path in sh_paths:
+    #    n = []
+    #    for p in path:
+    #        if p[1]['label']!= 'O':
+    #            n.append(p)
+    #    print(path)
+    #    print(n)
+    #    print()
+    #exit()
+
     optimal_path = find_optimal_path(sh_paths,len(generations))
     
     def get_answers(path, num_ques, tokens):
@@ -281,13 +321,20 @@ def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False):
     
     ans = get_answers(optimal_path,len(generations), tokens)
 
-    #if ans != gold_ans and (gold_invalid==0):
-    #    print(ans)
-    #    print(gold_ans)
-    #    print()
-        #exit()
+    # Checks for valid answers not matching the sanity checks
+    if ans != gold_ans and (gold_invalid==0):
+        for a_ix, a in enumerate(ans):
+            g_ans = gold_ans[a_ix].split(" ### ")
+            if (a not in g_ans) and (a == ''):
+                print(inst_ix)
+                print(sent)
+                print(ans)
+                print(gold_ans)
+                print()
+                break
+        
 
-
+    
     return ans, gold_invalid
 
 

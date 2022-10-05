@@ -13,11 +13,13 @@ from typing import Union
 
 GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-#device = "cpu"
+device = "cpu"
 
 torch.manual_seed(2121)
 
-problematic_ix = [709,710,711,1219,1220,1221,1502,1503,2694,2695,2696,2697,2921,2922,2923,3263,3264,3265,3266,3267,3390,3405,3406,3459,3460,4214,4215,4216,4508,4509,4510]
+#problematic_ix = [709,710,711,1219,1220,1221,1502,1503,2694,2695,2696,2697,2921,2922,2923,3263,3264,3265,3266,3267,3390,3405,3406,3459,3460,4214,4215,4216,4508,4509,4510]
+#problematic_ix = [4145,4146,4147,4457,4458,4459,4460,5856,5857,5858,5926,5927,5928]
+
 
 class PromptModel():
     def __init__(self, config: Config):
@@ -27,6 +29,7 @@ class PromptModel():
                     task = self.config.task_name,
                     dataset = self.config.dataset_name
                 )
+        print(len(self.data))
         self.init_model(self.config.model)
 
 
@@ -74,9 +77,11 @@ class PromptModel():
         """
         predicate = None
         sentence = None
+        sent_id = None
         pred_gens = []
         const_ans = []
         gold_ans = []
+        gold_ans_spans = []
         invalid_gold = 0
 
         cnt_ix = -1
@@ -87,19 +92,25 @@ class PromptModel():
             if predicate == None:
                 predicate = row["predicate"]
                 sentence = row["sentence"]
+                sent_id = row["sent_id"]
 
-            if predicate != row["predicate"]:
+            if ((predicate != row["predicate"]) or (sent_id != row["sent_id"])):
                 predicate = row["predicate"]
-                c_ans, g_inv = construct_graph(sentence, pred_gens,ix,gold_ans, sanity_check)
+                sent_id = row["sent_id"]
+                a_span = None
+                c_ans, g_inv = construct_graph(sentence, pred_gens,ix,gold_ans, sanity_check, ans_span=gold_ans_spans)
                 const_ans += c_ans
                 invalid_gold += g_inv
 
                 sentence = row["sentence"]
                 pred_gens = []
                 gold_ans = []
+                gold_ans_spans = []
                     
             pred_gens.append(generations[cnt_ix])
             gold_ans.append(row["answer"])
+            if "ans_span" in row.keys():
+                gold_ans_spans.append(row["ans_span"])
            
         c_ans, g_inv = construct_graph(sentence, pred_gens,len(self.data), gold_ans, sanity_check)
         const_ans += c_ans
@@ -115,15 +126,22 @@ if __name__ == "__main__":
     model = PromptModel(config)
     #_, gold, gens = model.generate(beam_size=20, test_mode=False)
     
-    #with open("output.bin", "wb") as output:
+    #with open("output_qasrl2.bin", "wb") as output:
     #    pickle.dump(gens, output)
-    with open("output.bin","rb") as data:
+    #exit()
+    #with open("output.bin","rb") as data:
+    #    gens = pickle.load(data)
+
+    with open("output_qasrl2.bin","rb") as data:
         gens = pickle.load(data)
     const_ans = model.constrained_inference(gens, sanity_check=False)
-
-    
+    #exit()
+    #with open("pred_qasrl2_dev.bin","wb") as output:
+    #    pickle.dump(const_ans, output)
     #analyse_beams(gold, gens, root_analysis=True)
-    
+    #with open("pred_qasrl2_dev.bin","rb") as output:
+    #    const_ans = pickle.load(output)
+
     ## Unconstrained Evaluation
     uncon_gens = [gen[0]["sentence"] for gen in gens]
     evaluate(model.data, model.config, uncon_gens)

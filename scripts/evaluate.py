@@ -16,7 +16,10 @@ def get_srl_stats(pred_golds, pred_gens, corr_qs, corr_qs_dep):
                 if token.dep_ == "ROOT":
                     r_ans.append(token.text)
         roots_gold.append(r_ans)
-
+        
+        if pred_gens[ix] == '':
+            roots_pred.append('')
+            continue
         doc2 = nlp(pred_gens[ix])
         for token in doc2:
             if token.dep_ == "ROOT":
@@ -52,7 +55,7 @@ def get_srl_stats(pred_golds, pred_gens, corr_qs, corr_qs_dep):
             print(pred_gens)
             print(roots_gold)
             print(roots_pred)
-            exit()
+            #exit()
     
     #print(roots_gold)
     #print(roots_pred)
@@ -64,6 +67,7 @@ def eval_wikisrl(data, preds):
     """ Evaluation module for SRL with wikipedia data.
     """
     predicate = None
+    sent_id = None
     pred_gens = []
     pred_golds = []
     comp = 0    # Counter for correct predicates
@@ -76,10 +80,12 @@ def eval_wikisrl(data, preds):
     for ix, row in data.iterrows():
         if predicate == None:
             predicate = row['predicate']
+            sent_id = row["sent_id"]
 
-        if (predicate != row['predicate']):
+        if (predicate != row['predicate']) or (sent_id != row["sent_id"]):
             # Compute results at every predicate
             predicate = row['predicate']  
+            sent_id = row['sent_id']
             
             comp_corr, corr_qs, comp_corr_dep, corr_qs_dep = get_srl_stats(pred_golds, pred_gens, corr_qs, corr_qs_dep)
             
@@ -116,8 +122,10 @@ def eval_wikisrl(data, preds):
        
 EVALUATION_DICT = {
             "srl": {
-                    "wiki": eval_wikisrl
-                }
+                    "wiki": eval_wikisrl,
+                    "qasrl2": eval_wikisrl
+                },
+        
         }
 
 

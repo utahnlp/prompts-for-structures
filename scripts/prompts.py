@@ -16,10 +16,27 @@ def prompt_srl_wiki(data, config):
     return prompts, gold
 
 
+def prompt_qasrl2(data, config):
+    """ Generate prompts and their corresponding answer.
+    """
+    if config.prompt_type == "discrete":
+        prompts = []
+        gold = []
+        
+        for ix, row in data.iterrows():
+            if config.model == "t5":
+                prompts.append(f"""question: {row["question"]} context: {" ".join(row["sentence"])} """)
+            gold.append(row["answer"])
+    
+    return prompts, gold
+
+
+
 PROMPT_DICT = {
 
             "srl": {
-                    "wiki" : prompt_srl_wiki
+                    "wiki" : prompt_srl_wiki,
+                    "qasrl2": prompt_qasrl2
                 },
         }
 
