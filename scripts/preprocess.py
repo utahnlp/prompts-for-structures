@@ -97,8 +97,72 @@ def preprocess_qasrl2(filepath):
 
 
 
-            
+def preprocess_ecbplus_coref(filepath):
+    """ Preprocess the ECB+ corpora Coreference Resolution.
+    """
+    with open(filepath) as f:
+        data = f.readlines()
+    data = data[1:-1] 
+    doc = []
+    document_id = None
+    sent_id = None
+    token_list = None
+    targ_cont_flag = False 
+    coref_dict = {"sentences": [], "entities":{}}
 
+    for line in data:
+        line_split = line.strip().split("\t")
+        if document_id == None:
+            document_id = line_split[2]
+
+        if (line_split[2] != document_id) and (document_id != None):
+            sent_id = None
+            token_list = None
+            if document_id == "35_11ecbplus.xml":
+                print(json.dumps(coref_dict,indent=4))
+                exit()
+            coref_dict = {"sentences": [], "entities":{}}
+            document_id = line_split[2]
+
+        
+        ############################
+        # Update token list from each 
+        # sentences
+        if sent_id != line_split[3]:
+            sent_id = line_split[3]
+            if token_list != None:
+                coref_dict["sentences"].append(token_list)
+                token_list = None 
+        if token_list == None:
+            token_list = []
+        
+        token_list.append(line_split[5])
+        
+        ############################
+        # Update all targets
+        if line_split[-1] != "-":
+            if (line_split[-1][0] == "(") and (line_split[-1][-1] == ")"):
+                tok_idx = [int(line_split[4])-1]
+                if line_split[-1][1:-1] not in coref_dict["entities"].keys():
+                    coref_dict["entities"][line_split[-1][1:-1]] = []
+                coref_dict["entities"][line_split[-1][1:-1]].append({"sent_id": sent_id, "tok_idx":tok_idx}) 
+            elif line_split[-1][0] == "(":
+                tok_idx = [int(line_split[4])-1]
+                targ_cont_flag = True
+            elif line_split[-1][-1] == ")":
+                tok_idx.append(int(line_split[4])-1)
+                if line_split[-1][:-1] not in coref_dict["entities"].keys():
+                    coref_dict["entities"][line_split[-1][:-1]] = []
+                coref_dict["entities"][line_split[-1][:-1]].append({"sent_id": sent_id, "tok_idx":tok_idx}) 
+                tok_ix = None
+                targ_cont_flag = False
+        else:
+            if targ_cont_flag:
+                tok_idx.append(int(line_split[4])-1)
+                
+
+
+    exit()
 
 
 
@@ -108,6 +172,9 @@ PREPROCESS_DICT = {
             "srl" : {
                     "wiki": preprocess_wikisrl,
                     "qasrl2": preprocess_qasrl2
+                },
+            "coref" : { 
+                    "ecbplus": preprocess_ecbplus_coref,
                 },
 
         }

@@ -13,7 +13,7 @@ from typing import Union
 
 GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+#device = "cpu"
 
 torch.manual_seed(2121)
 
@@ -30,7 +30,7 @@ class PromptModel():
                     dataset = self.config.dataset_name
                 )
         print(len(self.data))
-        self.init_model(self.config.model)
+        #self.init_model(self.config.model)
 
 
     def init_model(self, model_name: str):
@@ -39,7 +39,9 @@ class PromptModel():
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
-
+        elif model_name == "unified-qa":
+            self.tokenizer = T5Tokenizer.from_pretrained("allenai/unifiedqa-t5-large")
+            self.model = T5ForConditionalGeneration.from_pretrained("allenai/unifiedqa-t5-large").to(device)
 
     def generate(self, beam_size=1, test_mode=False):
         """ Method to prepare prompts and generate.
@@ -124,18 +126,19 @@ class PromptModel():
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
-    #_, gold, gens = model.generate(beam_size=20, test_mode=False)
+    exit()
+    _, gold, gens = model.generate(beam_size=20, test_mode=False)
     
-    #with open("output_qasrl2.bin", "wb") as output:
-    #    pickle.dump(gens, output)
-    #exit()
+    with open("output_qasrl_unifiedqa.bin", "wb") as output:
+        pickle.dump(gens, output)
+    
     #with open("output.bin","rb") as data:
     #    gens = pickle.load(data)
 
-    with open("output_qasrl2.bin","rb") as data:
-        gens = pickle.load(data)
+    #with open("output_qasrl2.bin","rb") as data:
+    #    gens = pickle.load(data)
     const_ans = model.constrained_inference(gens, sanity_check=False)
-    #exit()
+    
     #with open("pred_qasrl2_dev.bin","wb") as output:
     #    pickle.dump(const_ans, output)
     #analyse_beams(gold, gens, root_analysis=True)
