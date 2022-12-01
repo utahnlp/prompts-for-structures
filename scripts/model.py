@@ -30,7 +30,9 @@ class PromptModel():
                     dataset = self.config.dataset_name
                 )
         print(len(self.data))
-        #self.init_model(self.config.model)
+        #print(self.data["doc_id"].head(80))
+        #exit()
+        self.init_model(self.config.model)
 
 
     def init_model(self, model_name: str):
@@ -39,35 +41,111 @@ class PromptModel():
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
+        if model_name == "t5-11b":
+            self.tokenizer = T5Tokenizer.from_pretrained("t5-11b")
+            self.model = T5ForConditionalGeneration.from_pretrained("t5-11b",use_cdn = False).to(device)
+        if model_name == "t5-3b":
+            self.tokenizer = T5Tokenizer.from_pretrained("t5-3b")
+            self.model = T5ForConditionalGeneration.from_pretrained("t5-3b").to(device)
         elif model_name == "unified-qa":
             self.tokenizer = T5Tokenizer.from_pretrained("allenai/unifiedqa-t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("allenai/unifiedqa-t5-large").to(device)
+
+
+
+    def calibrate(self, beam_size):
+        if self.config.task_name in ['coref']:
+            def restrict_decode_vocab(batch_idx, prefix_beam):
+                return self.tokenizer(["Yes","No"], add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
+       
+            calib_out = self.model.generate( self.tokenizer("Yes or No?", return_tensors="pt").input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=2)
+            gens = []
+            ans_scores= []
+            ans_order = []
+            val_answers = ["Yes","No"]
+            for seq_ix in range(beam_size):
+                seq_dict = {}
+                seq_dict["sentence"] = self.tokenizer.decode(calib_out.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
+                seq_dict["score"] = calib_out.sequences_scores[seq_ix].item()
+                if seq_dict["sentence"] in val_answers:
+                    ans_order.append(seq_dict["sentence"])
+                    ans_scores.append(seq_dict["score"])
+                    val_answers.remove(seq_dict["sentence"])
+                    
+                gens.append(seq_dict)
+            p_cf = 1/torch.softmax(torch.Tensor(ans_scores),0)
+            
+            return p_cf, ans_order
+        else:
+            return None
+
+
+
 
     def generate(self, beam_size=1, test_mode=False):
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
         generation = []
+        def restrict_decode_vocab(batch_idx, prefix_beam):
+            return self.tokenizer(["Yes","No"], add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
+       
+        calib_out, calib_order = self.calibrate(beam_size)
+        print(calib_out)
+        print(calib_order)
+        #calib_order = ["Yes","No"]
+        #exit()
 
         for ix, prompt in tqdm(enumerate(prompts)):
             #if ix not in problematic_ix:
             #    continue
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
+            
             with torch.no_grad():
-                outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True)
-        
+                if self.config.task_name in ['coref']:
+                    outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=2)
+                else:
+                    outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True)
+
+
             if test_mode:
-                if ix == 20:
+                if ix == 76:
                     break
 
             # Storing top 10 sequences along with their scores 
             prompt_gens = []
+            # For tasks like coref the only valid answers would be Yer or No
+            # The lists 
+            if self.config.task_name in ['coref']:
+                val_answers = calib_order.copy()
+                ans_scores = [0]*len(val_answers)
+            
+            passed_ans = []
             for seq_ix in range(beam_size):
                 seq_dict = {}
-                seq_dict["sentence"] = self.tokenizer.decode(outputs.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
-                seq_dict["score"] = outputs.sequences_scores[seq_ix].item()
-                prompt_gens.append(seq_dict)
+                sentence = self.tokenizer.decode(outputs.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
+                score = outputs.sequences_scores[seq_ix].item()
                 
+                if self.config.task_name in ['coref']:
+                    if (sentence in val_answers) and (sentence not in passed_ans):
+                        ans_scores[val_answers.index(sentence)] = score
+                        if sentence not in passed_ans:
+                            passed_ans.append(sentence)
+                    if len(passed_ans) == len(val_answers):
+                        break
+                else:
+                    prompt_gens.append({"sentence": sentence, "score":score})
+            
+            if self.config.task_name in ['coref']:
+                #out_sf = torch.softmax(torch.Tensor(ans_scores),0)
+                #recalib_scores = calib_out*out_sf
+                
+                recalib_scores = torch.Tensor(ans_scores)
+                temp = sorted(zip(calib_order, recalib_scores.tolist()),key=lambda i:i[1],reverse=True)
+                
+                for l1, l2 in temp:
+                    prompt_gens.append({"sentence":l1, "score":l2})
+        
             generation.append(prompt_gens)
 
         return prompts, gold, generation
@@ -126,21 +204,26 @@ class PromptModel():
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
-    exit()
-    _, gold, gens = model.generate(beam_size=20, test_mode=False)
-    
-    with open("output_qasrl_unifiedqa.bin", "wb") as output:
-        pickle.dump(gens, output)
+
+    _, gold, gens = model.generate(beam_size=20, test_mode=True)
+    #for ix in range(50):
+    #    print(gold[ix])
+    #    print(gens[ix][0]["sentence"])
+    #    print()
+    #print(gens[0])
+    ##exit()
+    ##with open("outputc_crefecbp_t53b.bin", "wb") as output:
+    ##    pickle.dump(gens, output)
     
     #with open("output.bin","rb") as data:
     #    gens = pickle.load(data)
 
     #with open("output_qasrl2.bin","rb") as data:
     #    gens = pickle.load(data)
-    const_ans = model.constrained_inference(gens, sanity_check=False)
+    ##const_ans = model.constrained_inference(gens, sanity_check=False)
     
-    #with open("pred_qasrl2_dev.bin","wb") as output:
-    #    pickle.dump(const_ans, output)
+    ##with open("pred_wiki_tr_t53b.bin","wb") as output:
+    ##    pickle.dump(const_ans, output)
     #analyse_beams(gold, gens, root_analysis=True)
     #with open("pred_qasrl2_dev.bin","rb") as output:
     #    const_ans = pickle.load(output)
@@ -148,7 +231,7 @@ if __name__ == "__main__":
     ## Unconstrained Evaluation
     uncon_gens = [gen[0]["sentence"] for gen in gens]
     evaluate(model.data, model.config, uncon_gens)
-
+    exit()
     print("Constrained")
     evaluate(model.data, model.config, const_ans)
 

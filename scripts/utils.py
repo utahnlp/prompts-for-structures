@@ -2,6 +2,7 @@ from configparser import ConfigParser
 
 import numpy as np
 import spacy
+import uuid
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -86,6 +87,31 @@ def analyse_beams(targets, generations, root_analysis=False):
         print(f"Average position of target root in beam: {np.mean(beam_ranks_rt)}")
 
 
+
+
+
+class ValDict():
+    """ Value Dictionary which maps a unique identifier 
+    to an entity instance and vice versa.
+    """
+    def __init__():
+        self.dict = {}
+
+    def get_key(self, v):
+        for k in self.dict.keys():
+            if self.dict[k] == v:
+                return k
+
+    def forward(self, val):
+        if val not in self.dict.values():
+            key = uuid.uuid4()
+            self.dict[key] = val
+            return key
+        else:
+            return self.get_key(val)
+            
+        
+    
 
 
 

@@ -3,7 +3,7 @@ import jsonlines
 import pandas as pd
 from pathlib import Path
 from typing import Union
-
+from itertools import combinations
 
 def preprocess_wikisrl(filepath):
     """ Preprocessing function for Wikipedia SRL.
@@ -81,19 +81,88 @@ def preprocess_qasrl2(filepath):
                                     ans_str += " ".join(new_ans_str)
                                 else:
                                     ans_str += f""" ### {" ".join(new_ans_str)}"""
-                        #if len(ans["spans"]) != 1:
-                        #    print(sentence)
-                        #    print(predicate)
-                        #    print(ques_str)
-                        #    print(ans_str)
-                        #    exit())
-                    
+                         
                     processed_data.append([sent_id, total_predicates, sentence, predicate, ques_str, ans_str, ans_spans])
     
     columns = ["sent_id","total_predicates","sentence","predicate","question","answer","ans_span"]
     data_df = pd.DataFrame(processed_data, columns = columns)
 
     return data_df
+
+
+
+
+def generate_examples(c_dict, doc_id):
+    """ Generate positive and negative examples from a document
+    """
+    examples = []
+    # Iterating over entities
+    for ent_id in c_dict["entities"].keys():
+        # We can generate positive examples from entities which
+        # occur more than once
+        if len(c_dict["entities"][ent_id]) > 1:
+            # Curating pairs of mentions for the positive examples
+            pairs = list(combinations(c_dict["entities"][ent_id],2))
+            for pair in pairs:
+                # Extarcting entities
+                s_id1 = pair[0]["sent_id"]
+                s_id2 = pair[1]["sent_id"]
+                
+                norm_ent1_ids = [i-c_dict["sent_ixs"][s_id1] for i in pair[0]["tok_idx"] ]
+                norm_ent2_ids = [i-c_dict["sent_ixs"][s_id2] for i in pair[1]["tok_idx"] ]
+                
+                ent1 = " ".join([c_dict["sentences"][s_id1][i] for i in norm_ent1_ids])
+                ent2 = " ".join([c_dict["sentences"][s_id2][i] for i in norm_ent2_ids])
+            
+                sent1 = " ".join(c_dict["sentences"][s_id1])
+                sent2 = " ".join(c_dict["sentences"][s_id2])
+                in_order = True
+
+                if pair[0]["sent_id"] == pair[1]["sent_id"]:
+                    context  = f"{sent1}"
+                elif pair[0]["sent_id"] < pair[1]["sent_id"]:
+                    context = f"{sent1} {sent2}"
+                else:
+                    in_order = False
+                    context = f"{sent2} {sent1}"
+                
+                examples.append([doc_id, context, "Yes", ent1, ent2, ent_id, ent_id, c_dict["sentences"][s_id1], c_dict["sentences"][s_id2],norm_ent1_ids, norm_ent2_ids, in_order])
+        
+        ## Generate negative examples 
+        # Iterate over the entities
+        for ent in c_dict["entities"][ent_id]:
+            s_id1 = ent["sent_id"]
+            norm_ent1_ids = [i-c_dict["sent_ixs"][s_id1] for i in ent["tok_idx"] ]
+            ent1 = " ".join([c_dict["sentences"][s_id1][i] for i in norm_ent1_ids])
+            sent1 = " ".join(c_dict["sentences"][s_id1])
+            
+            # Iterating over entites dissimilar to the one considered
+            for neg_ent_id in c_dict["entities"].keys():
+                if neg_ent_id == ent_id:
+                    continue
+                # Iterating over all negative instances of a negative entity
+                for neg_ent in c_dict["entities"][neg_ent_id]:
+                    s_id2 = neg_ent["sent_id"]
+                    norm_ent2_ids = [i-c_dict["sent_ixs"][s_id2] for i in neg_ent["tok_idx"] ]
+                    ent2 = " ".join([c_dict["sentences"][s_id2][i] for i in norm_ent2_ids])
+                    sent2 = " ".join(c_dict["sentences"][s_id2])
+                    
+                    ent1_id = ent_id
+                    ent2_id = neg_ent_id
+                    in_order = True
+
+                    if s_id1 == s_id2:
+                        context  = f"{sent1}"
+                    elif s_id1 < s_id2:
+                        context = f"{sent1} {sent2}"
+                    else:
+                        context = f"{sent2} {sent1}"
+                        in_order = False
+ 
+                    examples.append([doc_id, context, "No", ent1, ent2, ent1_id, ent2_id, c_dict["sentences"][s_id1], c_dict["sentences"][s_id2],norm_ent1_ids, norm_ent2_ids, in_order])
+                    
+
+    return examples
 
 
 
@@ -106,30 +175,39 @@ def preprocess_ecbplus_coref(filepath):
     doc = []
     document_id = None
     sent_id = None
+    sent_cnt_ix = -1
     token_list = None
     targ_cont_flag = False 
-    coref_dict = {"sentences": [], "entities":{}}
+    coref_dict = {"sentences": [], "entities":{}, "sent_ixs":[]}
 
     for line in data:
         line_split = line.strip().split("\t")
         if document_id == None:
             document_id = line_split[2]
 
-        if (line_split[2] != document_id) and (document_id != None):
+        if (line_split[2] != document_id):
+            coref_dict["sentences"].append(token_list)
+            examples = generate_examples(coref_dict, document_id)
+            doc.extend(examples)
             sent_id = None
             token_list = None
-            if document_id == "35_11ecbplus.xml":
-                print(json.dumps(coref_dict,indent=4))
-                exit()
-            coref_dict = {"sentences": [], "entities":{}}
-            document_id = line_split[2]
+            sent_cnt_ix = -1
+            #if document_id == "35_11ecbplus.xml":
+            #    print(json.dumps(coref_dict,indent=4))
+            #    exit()
+            #doc.append(coref_dict)
 
+            coref_dict = {"sentences": [], "entities":{}, "sent_ixs": []}
+            document_id = line_split[2]
+            
         
         ############################
         # Update token list from each 
         # sentences
         if sent_id != line_split[3]:
             sent_id = line_split[3]
+            sent_cnt_ix += 1
+            coref_dict["sent_ixs"].append(int(line_split[4])-1)
             if token_list != None:
                 coref_dict["sentences"].append(token_list)
                 token_list = None 
@@ -145,7 +223,7 @@ def preprocess_ecbplus_coref(filepath):
                 tok_idx = [int(line_split[4])-1]
                 if line_split[-1][1:-1] not in coref_dict["entities"].keys():
                     coref_dict["entities"][line_split[-1][1:-1]] = []
-                coref_dict["entities"][line_split[-1][1:-1]].append({"sent_id": sent_id, "tok_idx":tok_idx}) 
+                coref_dict["entities"][line_split[-1][1:-1]].append({"sent_id": sent_cnt_ix, "tok_idx":tok_idx}) 
             elif line_split[-1][0] == "(":
                 tok_idx = [int(line_split[4])-1]
                 targ_cont_flag = True
@@ -153,7 +231,7 @@ def preprocess_ecbplus_coref(filepath):
                 tok_idx.append(int(line_split[4])-1)
                 if line_split[-1][:-1] not in coref_dict["entities"].keys():
                     coref_dict["entities"][line_split[-1][:-1]] = []
-                coref_dict["entities"][line_split[-1][:-1]].append({"sent_id": sent_id, "tok_idx":tok_idx}) 
+                coref_dict["entities"][line_split[-1][:-1]].append({"sent_id": sent_cnt_ix, "tok_idx":tok_idx}) 
                 tok_ix = None
                 targ_cont_flag = False
         else:
@@ -161,8 +239,10 @@ def preprocess_ecbplus_coref(filepath):
                 tok_idx.append(int(line_split[4])-1)
                 
 
-
-    exit()
+    columns = ["doc_id","sentence","answer","entity1","entity2","entity1_id","entity2_id","sent1","sent2","ent1_ix","ent2_ix","in_order"]
+    data_df = pd.DataFrame(doc, columns=columns)
+    
+    return data_df
 
 
 

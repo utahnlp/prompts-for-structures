@@ -120,11 +120,31 @@ def eval_wikisrl(data, preds):
 
         
        
+
+def eval_ecbplus(data, preds):
+    doc = None
+    for ix, row in data.iterrows():
+        if doc == None:
+            doc = row["doc_id"]
+        # Change in doc_id implies a new structure
+        if doc != row["doc_id"]:
+            entity_dict = {}
+            pass
+        
+            
+
+        
+        print(row.keys())
+        exit()
+
 EVALUATION_DICT = {
             "srl": {
                     "wiki": eval_wikisrl,
                     "qasrl2": eval_wikisrl
                 },
+            "coref": {
+                    "ecbplus": eval_ecbplus,
+                }
         
         }
 
