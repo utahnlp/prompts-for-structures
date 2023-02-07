@@ -415,4 +415,63 @@ def construct_graph_old(sent, generations):
     #print(generations[0][0]["sentence"])
     #print(generations[1][0]["sentence"])
     
-   
+
+
+
+
+
+def get_all_cliques(relations, max_vertices):
+    """ Get all cliques from pairwise connections. This function can be used to 
+    obtain cliques based on pairs of connections. Useful for applications like
+    coref resolution.
+
+    Inputs
+    --------------------
+    relations - List[List[int]]. List of connections in the form of tuple
+    max_vertices - int. Number of verices in the graph.
+    """
+    gr = nx.Graph()
+    nodes = list(range(max_vertices))
+    gr.add_nodes_from(nodes)
+    gr.add_edges_from(relations)
+
+    clusters = []
+
+    violations = 0
+
+    max_clique = list(nx.algorithms.approximation.max_clique(gr)) 
+    clusters.append(max_clique)
+
+    prev_rels = relations
+    
+    # Compute cliques for rest of the graph
+    while True:
+        # Remove already clustered nodes
+        for node in clusters[-1]:
+            nodes.remove(node)
+        
+        if len(nodes)==0:
+            break
+
+        new_rels = []
+        for rel in prev_rels:
+            if ((rel[0] in clusters[-1]) and (rel[1] in nodes)) or ((rel[1] in clusters[-1]) and (rel[0] in nodes)):
+                violations += 1
+            elif (rel[0] in nodes) and (rel[1] in nodes):
+                new_rels.append(rel)
+        prev_rels = new_rels
+        
+
+        sub_gr = nx.Graph()
+        sub_gr.add_nodes_from(nodes)
+        sub_gr.add_edges_from(new_rels)
+
+        m_clique = list(nx.algorithms.approximation.max_clique(sub_gr)) 
+        clusters.append(m_clique)
+        
+    return clusters, violations
+
+
+    
+    
+

@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 
+import itertools
 import numpy as np
 import spacy
 import uuid
@@ -27,6 +28,9 @@ class Config():
         self.mode = config.get('Run','mode')
         self.model = config.get('Model','model')
         self.prompt_type = config.get('Prompt','prompt_type')
+        self.prompt_style = config.get('Prompt','prompt_style')
+        self.context_style = config.get('Prompt', 'context_style')
+
 
 
 def fetch_root(txt):
@@ -111,8 +115,110 @@ class ValDict():
             return self.get_key(val)
             
         
-    
 
+def get_highlighted_context(row, model, full_context=False):
+    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b']:
+        
+        s1 = row['sent1'].copy()
+        ent1_ix = row['ent1_ix']
+        s1[ent1_ix[0]] = "*"+s1[ent1_ix[0]]
+        s1[ent1_ix[-1]] = s1[ent1_ix[-1]]+"*"
+        
+        if full_context:
+            passage = row['passage'].copy()
+            passage[row['sent1_id']] = s1
+
+        if row['sent1_id'] == row['sent2_id']:
+            s2 = s1.copy()    
+        else:
+            s2 = row['sent2'].copy()
+        ent2_ix = row["ent2_ix"]
+        s2[ent2_ix[0]] = "*"+s2[ent2_ix[0]]
+        s2[ent2_ix[-1]] = s2[ent2_ix[-1]]+"*"
+        
+
+        if full_context:
+            passage[row['sent2_id']] = s2
+            context = " ".join(list(itertools.chain(*passage)))
+        else:
+            if row["sent1_id"] == row['sent2_id']:
+                context = " ".join(s2)
+            else:
+                if row['in_order']:
+                    context =  " ".join(s1) + " " + " ".join(s2)
+                else:
+                    context =  " ".join(s2) + " " + " ".join(s1)
+        
+    return context
+
+
+
+
+
+def dataset_document_iterator(file_path):
+    """ Reads data from CONLL formated files and extarcts documents
+    Source from https://huggingface.co/datasets/conll2012_ontonotesv5/blob/main/conll2012_ontonotesv5.py
+    """
+    documents = []
+    with open(file_path, "r", encoding="utf8") as open_file:
+        conll_rows = []
+        document  = []
+        for line in open_file:
+            line = line.strip()
+            if line != "" and not line.startswith('#'):
+                conll_rows.append(line)
+            else:
+                if conll_rows:
+                    document.append(conll_rows)
+                    conll_rows = []
+            if line.startswith("#end document"):
+                documents.append(document)
+                document = []
+        if document:
+            documents.append(document) 
+        
+    return documents
+
+
+
+
+def right_to_left_search(rel_ids, max_mentions):
+    """ Anaphora resolution heuristic
+    """
+    #prinre
+    rel_mat = np.full((max_mentions,max_mentions),"N", dtype=str)
+    for rel in rel_ids:
+        low = min(rel)
+        high = max(rel)
+        rel_mat[low][high] = "Y"
+    
+    clusters = [[0]]
+    viol = 0
+
+    for i in range(1,max_mentions):
+        flag = True
+        cluster_id = None
+        for j in range(i-1,-1,-1):
+            # Analyse if the model says coreferrent
+            if rel_mat[j][i] == "Y":
+                if flag:
+                    # Condition when the nearest antexedent matches
+                    for c_ix, clus in enumerate(clusters):
+                        if j in clus:
+                            clusters[c_ix].append(i)
+                            flag = False
+                            cluster_id = c_ix
+                            break
+                else:
+                    # All other antecedents not in the same 
+                    # cluster are considered violations
+                    if j not in clusters[cluster_id]:
+                        viol += 1
+        if flag:
+            clusters.append([i])
+        
+    
+    return clusters, viol
 
 
 

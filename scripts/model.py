@@ -1,9 +1,12 @@
 from evaluate import evaluate
 from graph import construct_graph, Graph
 from utils import Config, analyse_beams
+from plot import plot_yes_no
 from preprocess import preprocess_file
 from prompts import generate_prompts
+from inference import run_inference
 
+import pandas as pd
 import pickle
 from pathlib import Path
 import torch
@@ -13,6 +16,9 @@ from typing import Union
 
 GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+
+
+
 #device = "cpu"
 
 torch.manual_seed(2121)
@@ -41,28 +47,30 @@ class PromptModel():
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
-        if model_name == "t5-11b":
+        elif model_name == "t5-11b":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-11b")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-11b",use_cdn = False).to(device)
-        if model_name == "t5-3b":
+        elif model_name == "t5-3b":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-3b")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-3b").to(device)
         elif model_name == "unified-qa":
             self.tokenizer = T5Tokenizer.from_pretrained("allenai/unifiedqa-t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("allenai/unifiedqa-t5-large").to(device)
+        elif model_name == "macaw-3b":
+            self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-3b")
+            self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-3b").to(device)
 
 
-
-    def calibrate(self, beam_size):
+    def calibrate(self, beam_size, restrict_ans= ["Yes","No"], max_len = 2, calib_prompt="Yes or No?"):
         if self.config.task_name in ['coref']:
             def restrict_decode_vocab(batch_idx, prefix_beam):
-                return self.tokenizer(["Yes","No"], add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
+                return self.tokenizer(restrict_ans, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
        
-            calib_out = self.model.generate( self.tokenizer("Yes or No?", return_tensors="pt").input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=2)
+            calib_out = self.model.generate(self.tokenizer(calib_prompt, return_tensors="pt").input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
             gens = []
             ans_scores= []
             ans_order = []
-            val_answers = ["Yes","No"]
+            val_answers = restrict_ans
             for seq_ix in range(beam_size):
                 seq_dict = {}
                 seq_dict["sentence"] = self.tokenizer.decode(calib_out.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
@@ -86,15 +94,34 @@ class PromptModel():
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
-        generation = []
+        generation = [] # The list contains all the generation from the model
+
+        ####### Paramters for generation
+        #restriction =  ["True","False"]
+        do_calibrate = False
+        if self.config.model in ["t5", "t5-11b", "t5-3b"]:
+            restriction = ["Yes","No"]
+        elif self.config.model in ["macaw-3b"]:
+            restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
+        calib_order = restriction.copy()
+        max_len = 10                                        # Maximum length of generation
+        calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"    # Prompt for calibration
+        
         def restrict_decode_vocab(batch_idx, prefix_beam):
-            return self.tokenizer(["Yes","No"], add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
-       
-        calib_out, calib_order = self.calibrate(beam_size)
-        print(calib_out)
-        print(calib_order)
-        #calib_order = ["Yes","No"]
-        #exit()
+            """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169
+            """
+            return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
+        
+        # Dump prompts and data to .csv file
+        #self.data["question"] = prompts
+        #self.data.to_csv("./../dumps/ecbp_dev_ques.csv")
+
+        # Calibrate if you have a restricted vocabulary
+        if do_calibrate:
+            calib_out, calib_order = self.calibrate(beam_size, restrict_ans=restriction.copy(), max_len=max_len, calib_prompt=calib_prompt)
+            print(f"Calibration Answer Order: {calib_order}")
+            print(f"Calibration Scores: {calib_out}")
+        
 
         for ix, prompt in tqdm(enumerate(prompts)):
             #if ix not in problematic_ix:
@@ -103,7 +130,7 @@ class PromptModel():
             
             with torch.no_grad():
                 if self.config.task_name in ['coref']:
-                    outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=2)
+                    outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
                 else:
                     outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True)
 
@@ -115,18 +142,22 @@ class PromptModel():
             # Storing top 10 sequences along with their scores 
             prompt_gens = []
             # For tasks like coref the only valid answers would be Yer or No
-            # The lists 
+            # The lists tally the valid answers against their respective scores 
             if self.config.task_name in ['coref']:
                 val_answers = calib_order.copy()
                 ans_scores = [0]*len(val_answers)
             
+            # Process outputs into a list of dictionary to store the generation and scores
             passed_ans = []
-            for seq_ix in range(beam_size):
+            for seq_ix in range(beam_size): #Iterate over the beam size
                 seq_dict = {}
                 sentence = self.tokenizer.decode(outputs.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
                 score = outputs.sequences_scores[seq_ix].item()
                 
+                # In the case of coreference and some other tasks the outputs are restrictive
+                # based on the 'val_answers' list. We post-process these task outputs separately
                 if self.config.task_name in ['coref']:
+                    # Only consider answers in the valid answer list and ones thta have not been generated yet
                     if (sentence in val_answers) and (sentence not in passed_ans):
                         ans_scores[val_answers.index(sentence)] = score
                         if sentence not in passed_ans:
@@ -134,18 +165,36 @@ class PromptModel():
                     if len(passed_ans) == len(val_answers):
                         break
                 else:
-                    prompt_gens.append({"sentence": sentence, "score":score})
+                    prompt_gens.append({"sentence": sentence, "score":score})   # Save generation and score
             
-            if self.config.task_name in ['coref']:
-                #out_sf = torch.softmax(torch.Tensor(ans_scores),0)
-                #recalib_scores = calib_out*out_sf
-                
-                recalib_scores = torch.Tensor(ans_scores)
+            # For coref and some other tasks, we need to post process the output and save the 
+            # generations in descending order of score. If needed these scores might have to be calibrated
+            if self.config.task_name in ['coref']: #and self.config.model!='macaw-3b':
+                out_sf = torch.softmax(torch.Tensor(ans_scores),0)  #Change to probability
+                if do_calibrate:
+                    # Calibrate
+                    recalib_scores = calib_out*out_sf
+                    recalib_scores = torch.softmax(torch.Tensor(recalib_scores),0)
+                else:
+                    recalib_scores = out_sf
+                # Sort by descending score
                 temp = sorted(zip(calib_order, recalib_scores.tolist()),key=lambda i:i[1],reverse=True)
                 
+                # Post-process answers to Yes/No
                 for l1, l2 in temp:
-                    prompt_gens.append({"sentence":l1, "score":l2})
-        
+                    if l1 in ["True","False"]:
+                        if l1 == "True":
+                            prompt_gens.append({"sentence":"No", "score":l2})
+                        else:
+                            prompt_gens.append({"sentence":"Yes", "score":l2})
+                    elif l1 in ["$answer$ = Yes", "$answer$ = No"]:
+                        if l1 == "$answer$ = No":
+                            prompt_gens.append({"sentence":"No", "score":l2})
+                        elif l1 == "$answer$ = Yes":
+                            prompt_gens.append({"sentence":"Yes", "score":l2})
+                    else:
+                        prompt_gens.append({"sentence":l1, "score":l2})
+                
             generation.append(prompt_gens)
 
         return prompts, gold, generation
@@ -155,47 +204,7 @@ class PromptModel():
     def constrained_inference(self, generations, sanity_check=False):
         """ Constrained Inference Module
         """
-        predicate = None
-        sentence = None
-        sent_id = None
-        pred_gens = []
-        const_ans = []
-        gold_ans = []
-        gold_ans_spans = []
-        invalid_gold = 0
-
-        cnt_ix = -1
-        for ix, row in tqdm(self.data.iterrows()):
-            #if ix not in problematic_ix:
-            #    continue
-            cnt_ix += 1
-            if predicate == None:
-                predicate = row["predicate"]
-                sentence = row["sentence"]
-                sent_id = row["sent_id"]
-
-            if ((predicate != row["predicate"]) or (sent_id != row["sent_id"])):
-                predicate = row["predicate"]
-                sent_id = row["sent_id"]
-                a_span = None
-                c_ans, g_inv = construct_graph(sentence, pred_gens,ix,gold_ans, sanity_check, ans_span=gold_ans_spans)
-                const_ans += c_ans
-                invalid_gold += g_inv
-
-                sentence = row["sentence"]
-                pred_gens = []
-                gold_ans = []
-                gold_ans_spans = []
-                    
-            pred_gens.append(generations[cnt_ix])
-            gold_ans.append(row["answer"])
-            if "ans_span" in row.keys():
-                gold_ans_spans.append(row["ans_span"])
-           
-        c_ans, g_inv = construct_graph(sentence, pred_gens,len(self.data), gold_ans, sanity_check)
-        const_ans += c_ans
-        invalid_gold += g_inv
-        print(f"# Gold answers not perfect sub-sequences: {invalid_gold}")
+        const_ans = run_inference(self.config.task_name, self.data, generations, sanity_check)
 
         return const_ans
 
@@ -204,14 +213,39 @@ class PromptModel():
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
+    
+    generate = False
 
-    _, gold, gens = model.generate(beam_size=20, test_mode=True)
-    #for ix in range(50):
-    #    print(gold[ix])
-    #    print(gens[ix][0]["sentence"])
-    #    print()
-    #print(gens[0])
-    ##exit()
+    if generate:
+        _, gold, gens = model.generate(beam_size=20, test_mode=False)
+  
+    task_name = "cref"
+    dataset_name = "ecbp"
+    model_name = "macaw3b"
+    read_spec = "highlight_fullcontext"
+    spec_det = "highlight_fullcontext_rtol"#highlight_fullcontext_rtol"
+    read_file_infix = f"{model_name}_{read_spec}"
+    file_infix = f"{model_name}_{spec_det}"
+    #print(gens)
+    
+    #plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
+    
+    ### Dump generations and gold
+    if generate:
+        with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin","wb") as out:
+            pickle.dump(gens, out)
+        with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold","wb") as out:
+            pickle.dump(gold, out)
+    
+    ### Read Dumps
+    if not generate:
+        with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gens.bin","rb") as out:
+            gens = pickle.load(out)
+        with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
+            gold = pickle.load(out)
+    
+   
+
     ##with open("outputc_crefecbp_t53b.bin", "wb") as output:
     ##    pickle.dump(gens, output)
     
@@ -220,19 +254,34 @@ if __name__ == "__main__":
 
     #with open("output_qasrl2.bin","rb") as data:
     #    gens = pickle.load(data)
-    ##const_ans = model.constrained_inference(gens, sanity_check=False)
-    
+    const_ans = model.constrained_inference(gens, sanity_check=False)
+    #print(len(const_ans))
+    #print(len(gold))
+    #exit()
     ##with open("pred_wiki_tr_t53b.bin","wb") as output:
     ##    pickle.dump(const_ans, output)
     #analyse_beams(gold, gens, root_analysis=True)
     #with open("pred_qasrl2_dev.bin","rb") as output:
     #    const_ans = pickle.load(output)
 
+    #data = pd.read_csv("./../dumps/ecbp_dev_ques_macaw_predictions.csv")
+    #uncon_gens = []
+    #for pred in data['prediction']:
+    #    if pred == "yes":
+    #        uncon_gens.append("Yes")
+    #    elif pred == "no":
+    #        uncon_gens.append("No")
+    #    else:
+    #        uncon_gens.append("No")
+    #        print("Incorrect")
     ## Unconstrained Evaluation
+    print("Unconstrained")
+    meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_uncons.txt", "constrained":False}
     uncon_gens = [gen[0]["sentence"] for gen in gens]
-    evaluate(model.data, model.config, uncon_gens)
-    exit()
+    evaluate(model.data, model.config, uncon_gens, meta)
+
     print("Constrained")
-    evaluate(model.data, model.config, const_ans)
+    #meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_cons.txt", "constrained":True}
+    #evaluate(model.data, model.config, const_ans, meta)
 
 

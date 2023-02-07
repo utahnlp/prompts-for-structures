@@ -1,4 +1,6 @@
+import itertools
 import pandas as pd
+from utils import get_highlighted_context
 
 
 def prompt_srl_wiki(data, config):
@@ -43,9 +45,28 @@ def prompt_coref_ecbplus(data,config):
         gold = []
         
         for ix, row in data.iterrows():
+            sent = row["sentence"]  
+            if config.context_style == "highlight":
+                sent = get_highlighted_context(row, config.model)
+            elif config.context_style == "full_context":
+                sent = " ".join(itertools.chain(*row['passage']))
+            elif config.context_style == "highlight_full_context":
+                sent = get_highlighted_context(row, config.model, full_context=True)
+            #if ix == 10:
+            #    for p in prompts:
+            #        print(p)
+    
+
             if config.model in ["t5","t5-11b","t5-3b"]:
-               # prompts.append(f"""hypothesis: {row["entity1"]} refers to {row["entity2"]}.  premise: {row["sentence"]} """)
-               prompts.append(f"""question: Does {row["entity1"]} refer to {row["entity2"]}? Yes or No? context: {row["sentence"]} """)
+                if config.prompt_style == "nli": 
+                    prompts.append(f"""hypothesis: {row["entity1"]} refers to {row["entity2"]}.  premise: {sent} """)
+                if config.prompt_style == "qa":
+                    prompts.append(f"""question: Does {row["entity1"]} refer to {row["entity2"]}? Yes or No? context: {sent} """)
+                elif config.prompt_style == "mcq":
+                    prompts.append(f"""copa choice1: Yes choice2: premise: {sent} question: Does {row["entity1"]} refer to {row["entity2"]}? Yes or No?""")
+            elif config.model in ["macaw-3b"]:
+                prompts.append(f"""$answer$ ; $mcoptions$=(A) Yes (B) No  ; {sent} Does {row["entity1"]} refer to {row["entity2"]}?""")
+                
                 #first = 1
                 #second = 2
                 #if not row["in_order"]:
