@@ -1,6 +1,6 @@
 from evaluate import evaluate
 from graph import construct_graph, Graph
-from utils import Config, analyse_beams
+from utils import Config, analyse_beams, restrict_vocab
 from plot import plot_yes_no
 from preprocess import preprocess_file
 from prompts import generate_prompts
@@ -16,11 +16,7 @@ from typing import Union
 
 GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-
-
-
 #device = "cpu"
-
 torch.manual_seed(2121)
 
 #problematic_ix = [709,710,711,1219,1220,1221,1502,1503,2694,2695,2696,2697,2921,2922,2923,3263,3264,3265,3266,3267,3390,3405,3406,3459,3460,4214,4215,4216,4508,4509,4510]
@@ -29,20 +25,30 @@ torch.manual_seed(2121)
 
 class PromptModel():
     def __init__(self, config: Config):
+        """ Constructor for the Prompt Model Pipeline. Preprocesses the data 
+        to break it down into components of a structure. Each row essentially
+        should have the essential ingredients for constructing the prompt.
+        Also, intiializes the prompt model.
+        Inputs
+        -----------------------
+        config- utils.Config. A config dictionary which loads the meta-data and 
+                paramaeters from the confg.ini file. 
+        """
         self.config = config
         self.data = preprocess_file(
                     file_path = Path(self.config.data_dir, self.config.data_file),
                     task = self.config.task_name,
                     dataset = self.config.dataset_name
                 )
-        print(len(self.data))
-        #print(self.data["doc_id"].head(80))
-        #exit()
+        print(f"Total number of queries: {len(self.data)}")
+         
         self.init_model(self.config.model)
 
 
+
     def init_model(self, model_name: str):
-        """ Initialize tokenizers and models Initialize tokenizers and models  
+        """ Initialize tokenizers and models Initialize tokenizers and models.
+        Models currently supported - "t5-{large,3b,11b}, unified-qa, macaw-3b"
         """
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
@@ -90,42 +96,32 @@ class PromptModel():
 
 
 
-    def generate(self, beam_size=1, test_mode=False):
+    def generate(self, beam_size=1, test_mode=False, do_calibrate=False):
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
+    
         generation = [] # The list contains all the generation from the model
 
         ####### Paramters for generation
-        #restriction =  ["True","False"]
-        do_calibrate = False
-        if self.config.model in ["t5", "t5-11b", "t5-3b"]:
-            restriction = ["Yes","No"]
-        elif self.config.model in ["macaw-3b"]:
-            restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
-        calib_order = restriction.copy()
-        max_len = 10                                        # Maximum length of generation
-        calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"    # Prompt for calibration
-        
-        def restrict_decode_vocab(batch_idx, prefix_beam):
-            """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169
-            """
-            return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
-        
-        # Dump prompts and data to .csv file
-        #self.data["question"] = prompts
-        #self.data.to_csv("./../dumps/ecbp_dev_ques.csv")
+        restriction, max_len, calib_prompt = restrict_vocab(self.config) # Restrictions on generation vocabulary and dummy promopts
 
         # Calibrate if you have a restricted vocabulary
         if do_calibrate:
+            calib_order = restriction.copy()
+            
+            def restrict_decode_vocab(batch_idx, prefix_beam):
+                """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169
+                """
+                return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
+
             calib_out, calib_order = self.calibrate(beam_size, restrict_ans=restriction.copy(), max_len=max_len, calib_prompt=calib_prompt)
             print(f"Calibration Answer Order: {calib_order}")
             print(f"Calibration Scores: {calib_out}")
         
 
+        # Iterate over prompts
         for ix, prompt in tqdm(enumerate(prompts)):
-            #if ix not in problematic_ix:
-            #    continue
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
             
             with torch.no_grad():
@@ -213,57 +209,50 @@ class PromptModel():
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
-    
-    generate = False
 
-    if generate:
+    # Intermediary dump data
+    task_name = "srl"#"cref"
+    dataset_name = "wikisrl"     #"ecbp"
+    model_name = "t53b"               #"macaw3b"
+    read_spec = ""            #"highlight_fullcontext"
+    spec_det = ""              #"highlight_fullcontext_rtol"
+    read_file_infix = f"{model_name}{read_spec}"
+    file_infix = f"{model_name}{spec_det}"
+    
+    run_generate = True
+    run_inference = True
+
+    ####### STEP 1. Generation
+    ### Generate & dump generations and gold
+    if run_generate:
         _, gold, gens = model.generate(beam_size=20, test_mode=False)
-  
-    task_name = "cref"
-    dataset_name = "ecbp"
-    model_name = "macaw3b"
-    read_spec = "highlight_fullcontext"
-    spec_det = "highlight_fullcontext_rtol"#highlight_fullcontext_rtol"
-    read_file_infix = f"{model_name}_{read_spec}"
-    file_infix = f"{model_name}_{spec_det}"
-    #print(gens)
-    
-    #plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
-    
-    ### Dump generations and gold
-    if generate:
+        #plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
+
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin","wb") as out:
             pickle.dump(gens, out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold","wb") as out:
-            pickle.dump(gold, out)
-    
+            pickle.dump(gold, out) 
     ### Read Dumps
-    if not generate:
+    else:
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gens.bin","rb") as out:
             gens = pickle.load(out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
             gold = pickle.load(out)
     
    
-
-    ##with open("outputc_crefecbp_t53b.bin", "wb") as output:
-    ##    pickle.dump(gens, output)
-    
-    #with open("output.bin","rb") as data:
-    #    gens = pickle.load(data)
-
-    #with open("output_qasrl2.bin","rb") as data:
-    #    gens = pickle.load(data)
-    const_ans = model.constrained_inference(gens, sanity_check=False)
-    #print(len(const_ans))
-    #print(len(gold))
-    #exit()
-    ##with open("pred_wiki_tr_t53b.bin","wb") as output:
-    ##    pickle.dump(const_ans, output)
+    ######## STEP 2. Running Inference
+    if run_inference:  
+        const_ans = model.constrained_inference(gens, sanity_check=False)
+        with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_consans.bin","wb") as out:
+            pickle.dump(const_ans, out)
+    else:
+        with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_consans.bin","rb") as out:
+            const_ans = pickle.load(out)
+    exit()
     #analyse_beams(gold, gens, root_analysis=True)
-    #with open("pred_qasrl2_dev.bin","rb") as output:
-    #    const_ans = pickle.load(output)
+    
 
+    #### Code to run Macaw-11B predictions
     #data = pd.read_csv("./../dumps/ecbp_dev_ques_macaw_predictions.csv")
     #uncon_gens = []
     #for pred in data['prediction']:
@@ -274,14 +263,17 @@ if __name__ == "__main__":
     #    else:
     #        uncon_gens.append("No")
     #        print("Incorrect")
+    
+    
+    ######### STEP 3. Evaluation
     ## Unconstrained Evaluation
     print("Unconstrained")
     meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_uncons.txt", "constrained":False}
-    uncon_gens = [gen[0]["sentence"] for gen in gens]
+    uncon_gens = [gen[0]["sentence"] for gen in gens]   #Taking the top path in the beam
     evaluate(model.data, model.config, uncon_gens, meta)
-
+    ## Constrained Evaluation
     print("Constrained")
-    #meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_cons.txt", "constrained":True}
-    #evaluate(model.data, model.config, const_ans, meta)
+    meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_cons.txt", "constrained":True}
+    evaluate(model.data, model.config, const_ans, meta)
 
 

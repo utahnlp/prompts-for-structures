@@ -3,12 +3,18 @@ from configparser import ConfigParser
 import itertools
 import numpy as np
 import spacy
+from typing import Union, List, Tuple
 import uuid
 
 nlp = spacy.load("en_core_web_sm")
 
 class Config():
     def __init__(self, filename="config.ini"):
+        """ Constructor for the Config class
+        Inputs
+        -----------------
+        filename: str or pathlib.Path. Config file path
+        """
         self.config_file = filename
         self.read_config(self.config_file)
 
@@ -30,6 +36,41 @@ class Config():
         self.prompt_type = config.get('Prompt','prompt_type')
         self.prompt_style = config.get('Prompt','prompt_style')
         self.context_style = config.get('Prompt', 'context_style')
+
+
+
+
+
+def restrict_vocab(config: Config) -> Tuple[ Union[List[str], None], Union[int, None], Union[str, None]]:
+    """ Produce output vocab restrictions based on the 
+    task and model.
+    Inputs
+    -------------------------
+    config: Config. The config instance
+
+    Outputs
+    ------------------------
+    restriction: List[str]. Contains list of tokens which the generatot should be restricted to.
+                    E.g.: ["Yes","No"] for a Yes/No task.
+    max_len: int. Max number of tokens which can be generated.
+    calib_prompt: str. Dummy prompt used for calibration
+    """
+    restriction = None # Contains restrictions on what can be generated
+    max_len = None # Maximum length in terms of sub-words used for generation
+    calib_prompt = None # Dummy prompt for calibration
+
+    if config.task_name in ["coref"]:
+        if config.model in ["t5", "t5-11b", "t5-3b"]:
+            restriction = ["Yes","No"]
+            max_len = 3
+            calib_prompt = "question: Yes or No? context: "
+        elif self.config.model in ["macaw-3b"]:
+            restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
+            max_len = 10
+            calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"
+
+    return restriction, max_len, calib_prompt
+
 
 
 
