@@ -14,7 +14,7 @@ from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from typing import Union
 
-GPU_ID = "1"
+GPU_ID = "0"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
 #device = "cpu"
 torch.manual_seed(2121)
@@ -219,8 +219,8 @@ if __name__ == "__main__":
     read_file_infix = f"{model_name}{read_spec}"
     file_infix = f"{model_name}{spec_det}"
     
-    run_generate = True
-    run_inference = True
+    run_generate = False
+    run_inference_module = False
 
     ####### STEP 1. Generation
     ### Generate & dump generations and gold
@@ -241,14 +241,13 @@ if __name__ == "__main__":
     
    
     ######## STEP 2. Running Inference
-    if run_inference:  
+    if run_inference_module:  
         const_ans = model.constrained_inference(gens, sanity_check=False)
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_consans.bin","wb") as out:
             pickle.dump(const_ans, out)
     else:
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_consans.bin","rb") as out:
             const_ans = pickle.load(out)
-    exit()
     #analyse_beams(gold, gens, root_analysis=True)
     
 
