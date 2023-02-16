@@ -36,7 +36,8 @@ class Config():
         self.prompt_type = config.get('Prompt','prompt_type')
         self.prompt_style = config.get('Prompt','prompt_style')
         self.context_style = config.get('Prompt', 'context_style')
-
+        self.read_spec = config.get('Dumps', 'read_spec')
+        self.spec_det = config.get('Dumps', 'dump_spec')
 
 
 

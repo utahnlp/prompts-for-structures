@@ -64,7 +64,7 @@ def get_srl_stats(pred_golds, pred_gens, corr_qs, corr_qs_dep):
 
 
 
-def eval_wikisrl(data, preds, meta):
+def eval_wikisrl(data, preds, meta=None):
     """ Evaluation module for SRL with wikipedia data.
     """
     predicate = None

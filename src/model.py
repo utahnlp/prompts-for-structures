@@ -41,7 +41,7 @@ class PromptModel():
                     dataset = self.config.dataset_name
                 )
         print(f"Total number of queries: {len(self.data)}")
-         
+                 
         self.init_model(self.config.model)
 
 
@@ -100,21 +100,22 @@ class PromptModel():
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
-    
+         
         generation = [] # The list contains all the generation from the model
 
         ####### Paramters for generation
-        restriction, max_len, calib_prompt = restrict_vocab(self.config) # Restrictions on generation vocabulary and dummy promopts
+        restriction, max_len, calib_prompt = restrict_vocab(self.config) # Restrictions on generation vocabulary and dummy prompts
 
-        # Calibrate if you have a restricted vocabulary
-        if do_calibrate:
-            calib_order = restriction.copy()
-            
-            def restrict_decode_vocab(batch_idx, prefix_beam):
+        def restrict_decode_vocab(batch_idx, prefix_beam):
                 """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169
                 """
                 return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
 
+
+        calib_order = restriction.copy()
+
+        # Calibrate if you have a restricted vocabulary
+        if do_calibrate:
             calib_out, calib_order = self.calibrate(beam_size, restrict_ans=restriction.copy(), max_len=max_len, calib_prompt=calib_prompt)
             print(f"Calibration Answer Order: {calib_order}")
             print(f"Calibration Scores: {calib_out}")
@@ -140,7 +141,10 @@ class PromptModel():
             # For tasks like coref the only valid answers would be Yer or No
             # The lists tally the valid answers against their respective scores 
             if self.config.task_name in ['coref']:
-                val_answers = calib_order.copy()
+                if do_calibrate:
+                    val_answers = calib_order.copy()
+                else:
+                    val_answers = restriction.copy()
                 ans_scores = [0]*len(val_answers)
             
             # Process outputs into a list of dictionary to store the generation and scores
@@ -209,13 +213,13 @@ class PromptModel():
 if __name__ == "__main__":
     config = Config()
     model = PromptModel(config)
-
+    
     # Intermediary dump data
-    task_name = "srl"#"cref"
-    dataset_name = "wikisrl"     #"ecbp"
-    model_name = "t53b"               #"macaw3b"
-    read_spec = ""            #"highlight_fullcontext"
-    spec_det = ""              #"highlight_fullcontext_rtol"
+    task_name = config.task_name           #"srl"#"cref"
+    dataset_name = config.dataset_name                         #"qasrl2"     #"ecbp"
+    model_name = config.model                           #"t53b"               #"macaw3b"
+    read_spec = config.read_spec            #"highlight_fullcontext"
+    spec_det = config.spec_det              #"highlight_fullcontext_rtol"
     read_file_infix = f"{model_name}{read_spec}"
     file_infix = f"{model_name}{spec_det}"
     
