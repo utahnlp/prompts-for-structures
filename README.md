@@ -33,3 +33,26 @@ To get started with the project, follow the steps mentioned below:
   ``` console
   (<venv_name>)foo@bar:prompts-for-structures/src$ python model.py --config_file <config_file_path>
   ```
+
+## Adding your Experiments
+---
+The codebase follows a centralized generation and inference pipeline. There are two facets to adding your task/dataset to the codebase: a) config file, and b) Ad-hoc code.
+### Config File
+The config file is the only input the system. The parameters in the file fixes the experimental setting. These parameters are explained briefly here:
+- Meta<br>
+  a. `task_name`: The parameter sets the structured prediction task which is undertaken. All datasets for this task must use the same value for the   task_name. If this is the first instance of the task, feel free to select a name.<br>
+  b. `dataset_name`: The dataset name used for the experiment. Use names consistently across runs.
+- Data<br>
+  a. `data_dir`: The directory where the data resides. Recommend fixing this to `./../data/` unless need be otherwise.<br>
+  b. `data_file`: The path with respect to data_dir to your data file(s)
+- Run<br>
+  a. `mode`: Mode of the run. This will remain `predict` unless model training/fine-tuning is required.
+- Model<br>
+  a. `model`: The model name to be used as your language model. Currently supported- `t5`(t5-large), `t5-3b`, `t5-11b`, `macaw-3b`, and `unified-qa`.
+- Prompt <br>
+  a. `prompt_type`: Will remain `discrete` for now. Functionalities for adding in-context examples and continous prompts coming soon.
+  b. `prompt_style`: A flexible parameter to tune how you want to position your task to the model. For example, as a QA task, Multiple-choice, etc.
+  c. `context_style`: A flexible parameter to tweak contexts for various experiments.
+- Dumps <br>
+  a. `dump_spec`: An infix to add when gold data and generations are dumped on disk. The dump will already contain information about the task, dataset and the model used. Any other spec can be added in this string.
+  b. `read_spec`: Infix which should be used to read any existing dumps
