@@ -14,13 +14,17 @@ To get started with the project, follow the steps mentioned below:
   foo@bar:~$ cd prompts-for-structures
   foo@bar:prompts-for-structures$ python -m venv <venv_name>
   foo@bar:prompts-for-structures$ source activate <venv_name>/bin/activate
-  (<venv_name>)foo@bar:~$
+  (<venv_name>)foo@bar:prompts-for-structures$
   ```
-3. Install package requirements.
+3. Create necessary data and dump folders.
+  ```console
+  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p data, dumps
+  ```
+4. Install package requirements.
   ```console
   (<venv_name>)foo@bar:prompts-for-structures$ pip install -r requirements.txt
   ```
-4. Install gurobipy. Install the Gurobi Optimzer (https://support.gurobi.com/hc/en-us/articles/4534161999889-How-do-I-install-Gurobi-Optimizer-). You'll need a Gurobi licence to use the optimizer. If you are in academia, you can obtain one at: https://www.gurobi.com/academia/academic-program-and-licenses/
+5. Install gurobipy. Install the Gurobi Optimzer (https://support.gurobi.com/hc/en-us/articles/4534161999889-How-do-I-install-Gurobi-Optimizer-). You'll need a Gurobi licence to use the optimizer. If you are in academia, you can obtain one at: https://www.gurobi.com/academia/academic-program-and-licenses/
   ```console
   (<venv_name>)foo@bar:prompts-for-structures$ pip install gurobipy
   ```
