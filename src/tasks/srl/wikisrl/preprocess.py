@@ -2,9 +2,16 @@ import pandas as pd
 from pathlib import Path
 from typing import Union
 
-
-def preprocess_wikisrl(filepath):
+def preprocess_wikisrl(filepath: Union[str,Path]) -> pd.DataFrame:
     """ Preprocessing function for Wikipedia SRL.
+    Input
+    ------------------
+    filepath - str or pathlib.Path. Input data path
+    
+    Output
+    ------------------
+    data_df - pd.DataFrame. Dataframe containg information
+            for each question.
     """
     with open(filepath) as f:
         data = f.readlines()
@@ -44,20 +51,3 @@ def preprocess_wikisrl(filepath):
     return data_df
 
 
-
-
-PREPROCESS_DICT = {
-            "srl" : {
-                    "wiki": preprocess_wikisrl
-                },
-
-        }
-
-
-
-def preprocess_file(file_path: Union[str,Path], task: str, dataset: str):
-    try:
-        return PREPROCESS_DICT[task][dataset](file_path)
-    except KeyError:
-        print("****Please check your task_name and dataset_name in your config file. They should match the dictionary keys in \
-                PREPROCESS_DICT in preprocess.py****")
