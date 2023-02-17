@@ -60,3 +60,7 @@ The config file is the only input the system. The parameters in the file fixes t
 - Dumps <br>
   a. `dump_spec`: An infix to add when gold data and generations are dumped on disk. The dump will already contain information about the task, dataset and the model used. Any other spec can be added in this string.
   b. `read_spec`: Infix which should be used to read any existing dumps
+
+### Adding Your Code
+The config file is the first step. This file is passed while running `src\model.py` file which is where the execution starts. The execution is broken into multiple steps. Each step has a nodal file under the `src\` directory. Each nodal file references the ad-hoc methods utilized for certain tasks and datasets. All ad-hoc files are stored under `src\tasks\<task_name>\<dataset_name>\`. Ideally, each steop should have its own file for readibility. The role of the nodal file is to ensure that each step has a consistent input and output file. The steps in the execution are as follows:
+1. *Preprocessing:*
