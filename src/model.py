@@ -6,6 +6,7 @@ from preprocess import preprocess_file
 from prompts import generate_prompts
 from inference import run_inference
 
+import argparse
 import pandas as pd
 import pickle
 from pathlib import Path
@@ -209,9 +210,20 @@ class PromptModel():
         return const_ans
 
 
+def add_parser_args(parser):
+    parser.add_argument('--config_file', default= "config.ini", type=str)
+    parser.add_argument('--read_generated', action='store_true')
+    parser.add_argument('--read_inferences', action='store_true')
+    return parser
+
 
 if __name__ == "__main__":
-    config = Config()
+    
+    parser = argparse.ArgumentParser()
+    parser = add_parser_args(parser)
+    args = vars(parser.parse_args())
+    
+    config = Config(filename=args['config_file'])
     model = PromptModel(config)
     
     # Intermediary dump data
@@ -223,8 +235,8 @@ if __name__ == "__main__":
     read_file_infix = f"{model_name}{read_spec}"
     file_infix = f"{model_name}{spec_det}"
     
-    run_generate = False
-    run_inference_module = False
+    run_generate = not args['read_generated']
+    run_inference_module = not args['read_inferences']
 
     ####### STEP 1. Generation
     ### Generate & dump generations and gold
