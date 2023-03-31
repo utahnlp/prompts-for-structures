@@ -6,7 +6,7 @@ from utils import get_highlighted_context, Config
 from tasks.srl.wikisrl.prompts import prompt_srl_wiki
 from tasks.srl.qasrl2.prompts import prompt_qasrl2
 from tasks.coref.ecbp.prompts import prompt_coref_ecbplus
-
+from tasks.ace.prompts import prompt_ace
 
 PROMPT_DICT = {
 
@@ -18,7 +18,7 @@ PROMPT_DICT = {
                     "ecbplus": prompt_coref_ecbplus
                 },
             "ace": {
-                "ace": prompt_coref_ecbplus
+                "ace": prompt_ace
             },
         }
 
