@@ -26,7 +26,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         ans_str = row["argument_text"]
         ans_span = row["argument_span"]
         processed_data.append(
-            [sent_id, sentence, predicate, ques_str, ans_str, ans_spans])
+            [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
