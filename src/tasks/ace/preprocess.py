@@ -16,7 +16,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
     data_df: pd.DataFrame. Dataframe where each row represents a row
             for prompting.
     """
-    infile = csv.DictReader(filepath, delimiter='\t')
+    infile = csv.DictReader(open(filepath), delimiter='\t')
     processed_data = []
     for row in infile:
         sent_id = row['arg_id']
