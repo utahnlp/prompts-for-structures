@@ -17,6 +17,9 @@ PROMPT_DICT = {
             "coref":{
                     "ecbplus": prompt_coref_ecbplus
                 },
+            "ace": {
+                "ace": prompt_coref_ecbplus
+            },
         }
 
 
