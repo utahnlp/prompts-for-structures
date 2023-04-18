@@ -23,11 +23,12 @@ def prompt_qasrl2(data: pd.DataFrame, config) -> Tuple[List[str], List[str]]:
         gold = []
         
         for ix, row in data.iterrows():
-            if config.model in ["t5","t5-11b","t5-3b"]:
+            if config.model in ["t5","t5-11b","t5-3b","t5-small","t5-base"]:
                 prompts.append(f"""question: {row["question"]} context: {" ".join(row["sentence"])} """)
             elif config.model == "unified-qa":
-                prompts.append(f"""{row["question"]} \n {" ".join(row["sentence"])} """)
-
+                prompts.append(f"""{row["question"]} \\n {" ".join(row["sentence"])} """)
+            elif config.model == "flan-t5-xl":
+                prompts.append(f"""{" ".join(row["sentence"])} \\n In the above sentence, {row["question"]}""")
             gold.append(row["answer"])
     
     return prompts, gold

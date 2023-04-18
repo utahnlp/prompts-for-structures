@@ -9,7 +9,7 @@ from utils import right_to_left_search, Config
 
 from tasks.srl.wikisrl.evaluate import eval_wikisrl 
 from tasks.coref.ecbp.evaluate import eval_ecbplus
-
+from tasks.coref.ontonotes.evaluate import eval_ontonotes
 
 
 EVALUATION_DICT = {
@@ -19,6 +19,7 @@ EVALUATION_DICT = {
                 },
             "coref": {
                     "ecbplus": eval_ecbplus,
+                    "ontonotes": eval_ontonotes
                 }
         
         }

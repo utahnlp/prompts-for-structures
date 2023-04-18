@@ -15,7 +15,8 @@ PROMPT_DICT = {
                     "qasrl2": prompt_qasrl2
                 },
             "coref":{
-                    "ecbplus": prompt_coref_ecbplus
+                    "ecbplus": prompt_coref_ecbplus,
+                    "ontonotes": prompt_coref_ecbplus
                 },
         }
 

@@ -1,7 +1,7 @@
 from evaluate import evaluate
 from graph import construct_graph, Graph
 from utils import Config, analyse_beams, restrict_vocab
-from plot import plot_yes_no
+from plot import plot_yes_no, plot_calibration, plot_score_diff
 from preprocess import preprocess_file
 from prompts import generate_prompts
 from inference import run_inference
@@ -15,7 +15,7 @@ from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from typing import Union
 
-GPU_ID = "0"
+GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
 #device = "cpu"
 torch.manual_seed(2121)
@@ -42,7 +42,12 @@ class PromptModel():
                     dataset = self.config.dataset_name
                 )
         print(f"Total number of queries: {len(self.data)}")
-                 
+        #ids = 21
+        #print(self.data["sentence"].iloc[ids])
+        #print(self.data["entity1"].iloc[ids])
+        #print(self.data["entity2"].iloc[ids])
+        #print(self.data["answer"].iloc[ids])
+        #exit()         
         self.init_model(self.config.model)
 
 
@@ -54,12 +59,12 @@ class PromptModel():
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
-        elif model_name == "t5-11b":
-            self.tokenizer = T5Tokenizer.from_pretrained("t5-11b")
-            self.model = T5ForConditionalGeneration.from_pretrained("t5-11b",use_cdn = False).to(device)
-        elif model_name == "t5-3b":
-            self.tokenizer = T5Tokenizer.from_pretrained("t5-3b")
-            self.model = T5ForConditionalGeneration.from_pretrained("t5-3b").to(device)
+        elif model_name in ["t5-small","t5-base","t5-11b","t5-3b"]:
+            self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+            self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
+        elif model_name in ["flan-t5-xl"]:
+            self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl")
+            self.model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-xl").to(device)
         elif model_name == "unified-qa":
             self.tokenizer = T5Tokenizer.from_pretrained("allenai/unifiedqa-t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("allenai/unifiedqa-t5-large").to(device)
@@ -77,7 +82,7 @@ class PromptModel():
             gens = []
             ans_scores= []
             ans_order = []
-            val_answers = restrict_ans
+            val_answers = restrict_ans.copy()
             for seq_ix in range(beam_size):
                 seq_dict = {}
                 seq_dict["sentence"] = self.tokenizer.decode(calib_out.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
@@ -88,20 +93,36 @@ class PromptModel():
                     val_answers.remove(seq_dict["sentence"])
                     
                 gens.append(seq_dict)
-            p_cf = 1/torch.softmax(torch.Tensor(ans_scores),0)
+        
+
+            if self.config.calibration_type == "calib_before_use": 
+                p_cf = 1/torch.softmax(torch.Tensor(ans_scores),0)
+            elif self.config.calibration_type == "pmi":
+                p_cf = torch.softmax(torch.Tensor(ans_scores),0) 
+            elif self.config.calibration_type == "score_diff":
+                offset = 0 
+                if "Yes" in restrict_ans:
+                    for aix, a in enumerate(ans_order):
+                        if a == "Yes":
+                            offset += ans_scores[aix]
+                        elif a == "No":
+                            offset -= ans_scores[aix]
+                
+                p_cf = offset
+                ans_order = restrict_ans
             
             return p_cf, ans_order
         else:
-            return None
+            return None, None
 
 
 
 
-    def generate(self, beam_size=1, test_mode=False, do_calibrate=False):
+    def generate(self, beam_size=1, test_mode=False):
         """ Method to prepare prompts and generate.
         """
-        prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
-         
+        prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers)    
+        do_calibrate = self.config.do_calibrate
         generation = [] # The list contains all the generation from the model
 
         ####### Paramters for generation
@@ -112,8 +133,8 @@ class PromptModel():
                 """
                 return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
 
-
-        calib_order = restriction.copy()
+        if restriction != None:
+            calib_order = restriction.copy()
 
         # Calibrate if you have a restricted vocabulary
         if do_calibrate:
@@ -124,8 +145,10 @@ class PromptModel():
 
         # Iterate over prompts
         for ix, prompt in tqdm(enumerate(prompts)):
+            #if ix < 13030:
+            #    continue
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
-            
+            #print(input_ids.shape)
             with torch.no_grad():
                 if self.config.task_name in ['coref']:
                     outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
@@ -142,10 +165,7 @@ class PromptModel():
             # For tasks like coref the only valid answers would be Yer or No
             # The lists tally the valid answers against their respective scores 
             if self.config.task_name in ['coref']:
-                if do_calibrate:
-                    val_answers = calib_order.copy()
-                else:
-                    val_answers = restriction.copy()
+                val_answers = calib_order.copy()
                 ans_scores = [0]*len(val_answers)
             
             # Process outputs into a list of dictionary to store the generation and scores
@@ -171,11 +191,21 @@ class PromptModel():
             # For coref and some other tasks, we need to post process the output and save the 
             # generations in descending order of score. If needed these scores might have to be calibrated
             if self.config.task_name in ['coref']: #and self.config.model!='macaw-3b':
-                out_sf = torch.softmax(torch.Tensor(ans_scores),0)  #Change to probability
+                if self.config.score_type == "prob":
+                    out_sf = torch.softmax(torch.Tensor(ans_scores),0)  #Change to probability
+                else:
+                    out_sf = torch.Tensor(ans_scores)
                 if do_calibrate:
                     # Calibrate
-                    recalib_scores = calib_out*out_sf
-                    recalib_scores = torch.softmax(torch.Tensor(recalib_scores),0)
+                    if self.config.calibration_type == "calib_before_use":
+                        recalib_scores = calib_out*out_sf
+                        recalib_scores = torch.softmax(torch.Tensor(recalib_scores),0)
+                    elif self.config.calibration_type == "score_diff":
+                        if "Yes" in calib_order:
+                            out_sf[calib_order.index("Yes")] -=  calib_out
+                        recalib_scores = out_sf
+                    elif self.config.calibration_type == "pmi":
+                        recalib_scores = torch.div(out_sf, calib_out)
                 else:
                     recalib_scores = out_sf
                 # Sort by descending score
@@ -197,15 +227,15 @@ class PromptModel():
                         prompt_gens.append({"sentence":l1, "score":l2})
                 
             generation.append(prompt_gens)
-
+            torch.cuda.empty_cache() 
         return prompts, gold, generation
 
 
 
-    def constrained_inference(self, generations, sanity_check=False):
+    def constrained_inference(self, generations, sanity_check=False, meta= None):
         """ Constrained Inference Module
         """
-        const_ans = run_inference(self.config.task_name, self.data, generations, sanity_check)
+        const_ans = run_inference(self.config.task_name, self.data, generations, sanity_check, meta)
 
         return const_ans
 
@@ -242,8 +272,7 @@ if __name__ == "__main__":
     ### Generate & dump generations and gold
     if run_generate:
         _, gold, gens = model.generate(beam_size=20, test_mode=False)
-        #plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
-
+        
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin","wb") as out:
             pickle.dump(gens, out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold","wb") as out:
@@ -254,11 +283,14 @@ if __name__ == "__main__":
             gens = pickle.load(out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
             gold = pickle.load(out)
-    
-   
+    #plot_score_diff(gold, gens, prefix='uncalib_macaw_')
+    #plot_yes_no(gold, gens, prefix='fulldev')
+    #plot_calibration(gens, gold, filename= "./../figures/cbu_calibplot.pdf")
+     
     ######## STEP 2. Running Inference
-    if run_inference_module:  
-        const_ans = model.constrained_inference(gens, sanity_check=False)
+    if run_inference_module:
+        meta= {'thresh': 0.5, "config": model.config}
+        const_ans = model.constrained_inference(gens, sanity_check=False, meta= meta)
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_consans.bin","wb") as out:
             pickle.dump(const_ans, out)
     else:

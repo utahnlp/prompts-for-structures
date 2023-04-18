@@ -22,10 +22,12 @@ def prompt_srl_wiki(data: pd.DataFrame, config) -> Tuple[List[str], List[str]]:
         gold = []
 
         for ix, row in data.iterrows():
-            if config.model in ["t5","t5-11b","t5-3b"]:
+            if config.model in ["t5","t5-11b","t5-3b","t5-base","t5-small"]:
                 prompts.append(f"""question: {row["question"]} context: {row["sentence"]}""")
             elif config.model == "unified-qa":
-                prompts.append(f"""{row["question"]} \n {row["sentence"]} """)
+                prompts.append(f"""{row["question"]} \\n {row["sentence"]} """)
+            elif config.model == "flan-t5-xl":
+                prompts.append(f"""{" ".join(row["sentence"])} \\n In the above sentence, {row["question"]}""")
             else:
                 print("""************* Model name not supported for the dataset-task combination. Please recheck model name. """)
             gold.append(row["answer"])

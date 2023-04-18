@@ -18,7 +18,7 @@ To get started with the project, follow the steps mentioned below:
   ```
 3. Create necessary data and dump folders.
   ```console
-  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p data, dumps
+  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p data dumps
   ```
 4. Install package requirements.
   ```console

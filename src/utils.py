@@ -38,6 +38,28 @@ class Config():
         self.context_style = config.get('Prompt', 'context_style')
         self.read_spec = config.get('Dumps', 'read_spec')
         self.spec_det = config.get('Dumps', 'dump_spec')
+        
+        self.do_calibrate = self.check_bool(config.get('Calibration', 'do_calibrate'))
+        
+        self.calibration_type = config.get('Calibration','calibration_type')
+        self.score_type = config.get('Inference','score_type')
+
+        self.consistency_check()
+
+    def check_bool(self, spec):
+        if spec == "True":
+            return True
+        else:
+            return False
+
+
+    def consistency_check(self):
+        if self.calibration_type == "calib_before_use" and self.score_type!="prob":
+            raise Exception(f"""Calibration method {self.calibration_type} is not compatible with the score type {self.score_type}. Please change the score type to "prob" in your config file""")
+        if self.calibration_type == "score_diff" and self.score_type!="raw":
+            raise Exception(f"""Calibration method {self.calibration_type} is not compatible with the score type {self.score_type}. Please change the score type to "raw" in your config file""")
+
+
 
 
 
@@ -65,7 +87,7 @@ def restrict_vocab(config: Config) -> Tuple[ Union[List[str], None], Union[int, 
             restriction = ["Yes","No"]
             max_len = 3
             calib_prompt = "question: Yes or No? context: "
-        elif self.config.model in ["macaw-3b"]:
+        elif config.model in ["macaw-3b"]:
             restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
             max_len = 10
             calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"
