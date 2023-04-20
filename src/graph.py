@@ -210,12 +210,6 @@ def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False, ans_span
         for opt_ix, opt in enumerate(possb_ans):
             if ans_span != []:
                 match = True
-                print('ok')
-                print(ans)
-                print(ans_span)
-                print(a_ix)
-                print(opt_ix)
-                print(possb_ans)
                 s_ix = [ans_span[a_ix][opt_ix][0]]
                 e_ix = [ans_span[a_ix][opt_ix][1]]
             else:
