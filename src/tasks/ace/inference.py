@@ -36,30 +36,31 @@ def inference_ace(data: pd.DataFrame, generations, sanity_check) -> List[str]:
     for ix, row in tqdm(data.iterrows()):
         cnt_ix += 1
         if predicate == None:
-            predicate = row["predicate"]
-            sentence = row["sentence"]
-            sent_id = row["sent_id"]
+            predicate = row["predicate_lemma"]
+            sentence = row["text"]
+            #sent_id = row["sent_id"]
 
         # If thecondition is satisfied, we have the data points for the structure
-        if ((predicate != row["predicate"]) or (sent_id != row["sent_id"])):
-            predicate = row["predicate"]
-            sent_id = row["sent_id"]
+        #if ((predicate != row["predicate_lemma"]) or (sent_id != row["sent_id"])):
+        if ((predicate != row["predicate_lemma"])):
+            predicate = row["predicate_lemma"]
+            #sent_id = row["sent_id"]
 
             c_ans, g_inv = construct_graph(sentence, pred_gens, ix, gold_ans, sanity_check, ans_span=gold_ans_spans)
             const_ans += c_ans  # Answers selected via the inference algorithm
             invalid_gold += g_inv  # All answers that are invalid (non-extarctive)
 
-            sentence = row["sentence"]
+            sentence = row["text"]
             pred_gens = []
             gold_ans = []
             gold_ans_spans = []
 
         # Store answers and the gold answers
         pred_gens.append(generations[cnt_ix])
-        gold_ans.append(row["answer"])
+        gold_ans.append(row["argument_text"])
         # Gold answer spans for sanity check
-        if "ans_span" in row.keys():
-            gold_ans_spans.append(row["ans_span"])
+        if "argument_span" in row.keys():
+            gold_ans_spans.append(row["argument_span"])
 
     # Inference for the last structure
     c_ans, g_inv = construct_graph(sentence, pred_gens, len(data), gold_ans, sanity_check, ans_span=gold_ans_spans)
