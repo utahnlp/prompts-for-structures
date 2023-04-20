@@ -112,8 +112,8 @@ class PromptModel():
                 """
                 return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
 
-
-        calib_order = restriction.copy()
+        if restriction:
+            calib_order = restriction.copy()
 
         # Calibrate if you have a restricted vocabulary
         if do_calibrate:
