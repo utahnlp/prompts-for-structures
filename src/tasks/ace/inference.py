@@ -34,6 +34,7 @@ def inference_ace(data: pd.DataFrame, generations, sanity_check) -> List[str]:
     cnt_ix = -1
     # iterate over the dataset
     for ix, row in tqdm(data.iterrows()):
+        print(row)
         cnt_ix += 1
         if predicate == None:
             predicate = row["predicate_lemma"]
