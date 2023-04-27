@@ -14,6 +14,7 @@ import torch
 from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from typing import Union
+import sys
 
 GPU_ID = "0"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
@@ -101,6 +102,10 @@ class PromptModel():
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
+
+        print(prompts)
+        print(gold)
+        sys.exit(0)
          
         generation = [] # The list contains all the generation from the model
 
