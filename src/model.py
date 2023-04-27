@@ -102,10 +102,6 @@ class PromptModel():
         """ Method to prepare prompts and generate.
         """
         prompts, gold = generate_prompts(self.data, self.config)    # Generate prompts and their answers
-
-        print(prompts)
-        print(gold)
-        sys.exit(0)
          
         generation = [] # The list contains all the generation from the model
 
