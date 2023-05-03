@@ -9,7 +9,7 @@ from collections import defaultdict
 def read_type_questions():
     #type : question
     type_q_map = defaultdict(lambda : '')
-    infile = csv.DictReader(open('questions.tsv'), delimiter='\t')
+    infile = csv.DictReader(open('questions/questions.tsv'), delimiter='\t')
 
     for row in infile:
         type_q_map[row['type']]=row['question']
@@ -19,7 +19,7 @@ def read_type_questions():
 def read_types():
     # predicate : argument : types
     type_dict = defaultdict(lambda: defaultdict(lambda: []))
-    infile = csv.DictReader(open('type_question_map.tsv'), delimiter='\t')
+    infile = csv.DictReader(open('questions/type_question_map.tsv'), delimiter='\t')
 
     for row in infile:
         predicate, arg = row[0].split('_')
@@ -31,7 +31,7 @@ def read_types():
 def read_questions():
     # predicate : argument : question
     q_dict = defaultdict(lambda : defaultdict(lambda : ''))
-    infile = csv.DictReader(open('type_question_map.tsv'), delimiter='\t')
+    infile = csv.DictReader(open('questions/type_question_map.tsv'), delimiter='\t')
 
     for row in infile:
         predicate, arg = row[0].split('_')
