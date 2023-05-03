@@ -35,6 +35,7 @@ def read_questions():
     infile = csv.DictReader(open('../data/questions/type_question_map.tsv'), delimiter='\t')
 
     for row in infile:
+        print(row)
         predicate, arg = row[0].split('_')
         predicate = '_'.join(predicate.split('.'))
         q_dict[predicate][arg] = row[1]
