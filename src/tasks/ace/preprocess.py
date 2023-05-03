@@ -94,8 +94,12 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
         #TODO: for now I am only predicting for existing arguments!
         for arg in row['arguments']:
             arg_role = arg['role_type']
-            question = q_dict[predicate_role][arg_role]
-            print(question)
+            if predicate_role in q_dict:
+                if arg_role in q_dict[predicate_role]:
+                    question = q_dict[predicate_role][arg_role]
+            else:
+                print(predicate_role)
+                print(arg_role)
             ques_str = question
             ans_str = arg["text"]
             ans_span = arg["span"]
