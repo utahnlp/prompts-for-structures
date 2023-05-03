@@ -83,14 +83,14 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             for prompting.
     """
     # predicate : argument : question
-    #q_dict = read_questions()
+    q_dict = read_questions()
     infile = jsonlines.open(filepath)
     processed_data = []
     for row in infile:
         sent_id = row['predicate']['event_id']
         sentence = row['text']
         predicate = row['predicate']['lemma']
-        predicate_role = row['predicate']['']
+        predicate_role = row['predicate']['event_type']
         #TODO: for now I am only predicting for existing arguments!
         for arg in row['arguments']:
             arg_role = arg['role_type']
