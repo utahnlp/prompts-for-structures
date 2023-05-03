@@ -97,6 +97,9 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             if predicate_role in q_dict:
                 if arg_role in q_dict[predicate_role]:
                     question = q_dict[predicate_role][arg_role]
+                else:
+                    print(predicate_role)
+                    print(arg_role)
             else:
                 print(predicate_role)
                 print(arg_role)
