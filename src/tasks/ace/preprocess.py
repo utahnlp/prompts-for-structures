@@ -23,9 +23,10 @@ def read_types():
     infile = csv.reader(open('../data/questions/type_question_map.tsv'), delimiter='\t')
 
     for row in infile:
-        predicate, arg = row[0].split('_')
-        predicate = '_'.join(predicate.split('.'))
-        type_dict[predicate][arg] = row[2:]
+        if not 'Time' in row[0]:
+            predicate, arg = row[0].split('_')
+            predicate = '_'.join(predicate.split('.'))
+            type_dict[predicate][arg] = row[2:]
 
     return type_dict
 
@@ -35,9 +36,10 @@ def read_questions():
     infile = csv.reader(open('../data/questions/type_question_map.tsv'), delimiter='\t')
 
     for row in infile:
-        predicate, arg = row[0].split('_')
-        predicate = '_'.join(predicate.split('.'))
-        q_dict[predicate][arg] = row[1]
+        if not 'Time' in row[0]:
+            predicate, arg = row[0].split('_')
+            predicate = '_'.join(predicate.split('.'))
+            q_dict[predicate][arg] = row[1]
 
     return q_dict
 
@@ -95,23 +97,26 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
         #TODO: for now I am only predicting for existing arguments!
         for arg in row['arguments']:
             arg_role = arg['role_type']
-            if predicate_role in q_dict:
-                if arg_role in q_dict[predicate_role]:
-                    question = q_dict[predicate_role][arg_role]
+            if 'Time' in arg_role:
+                pass
+            else:
+                if predicate_role in q_dict:
+                    if arg_role in q_dict[predicate_role]:
+                        question = q_dict[predicate_role][arg_role]
+                    else:
+                        print(predicate_role)
+                        print(arg_role)
+                        outfile.writerow([predicate_role, arg_role])
                 else:
                     print(predicate_role)
                     print(arg_role)
-                    outfile.writerow([predicate_role, arg_role])
-            else:
-                print(predicate_role)
-                print(arg_role)
-            ques_str = question
-            ans_str = arg["text"]
-            ans_span = arg["span"]
-            ans_span = ans_span.split(':')
-            ans_span = [[int(ans_span[0]),int(ans_span[1])]]
-            processed_data.append(
-                [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
+                ques_str = question
+                ans_str = arg["text"]
+                ans_span = arg["span"]
+                ans_span = ans_span.split(':')
+                ans_span = [[int(ans_span[0]),int(ans_span[1])]]
+                processed_data.append(
+                    [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
