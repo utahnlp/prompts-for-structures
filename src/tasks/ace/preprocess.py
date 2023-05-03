@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Union
 import csv
 from collections import defaultdict
+import sys
 
 def read_type_questions():
     #type : question
@@ -82,8 +83,10 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             for prompting.
     """
     # predicate : argument : question
-    q_dict = read_questions()
+    #q_dict = read_questions()
     infile = jsonlines.open(filepath)
+    print(filepath)
+    sys.exit(0)
     processed_data = []
     for row in infile:
         sent_id = row['predicate']['event_id']
