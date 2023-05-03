@@ -86,6 +86,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
     q_dict = read_questions()
     infile = jsonlines.open(filepath)
     processed_data = []
+    outfile = csv.writer(open('missing.csv', 'w'))
     for row in infile:
         sent_id = row['predicate']['event_id']
         sentence = row['text']
@@ -100,6 +101,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
                 else:
                     print(predicate_role)
                     print(arg_role)
+                    outfile.writerow([predicate_role, arg_role])
             else:
                 print(predicate_role)
                 print(arg_role)
