@@ -17,5 +17,5 @@ with open(f"/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/
 for g in gens_types:
     print(g)
 
-for g in gold_types:
-    print(g)
+#for g in gold_types:
+#    print(g)
