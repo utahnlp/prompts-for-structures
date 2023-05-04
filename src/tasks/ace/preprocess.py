@@ -43,6 +43,8 @@ def read_questions():
 
     return q_dict
 
+
+
 def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
     """ Preprocessing function for ACE with questions.
     Input
@@ -54,19 +56,41 @@ def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
     data_df: pd.DataFrame. Dataframe where each row represents a row
             for prompting.
     """
-    infile = csv.DictReader(open(filepath), delimiter='\t')
+    type_q_dict = read_type_questions()
+    # predicate : argument : types
+    q_dict = read_types()
+    infile = jsonlines.open(filepath)
     processed_data = []
     for row in infile:
-        sent_id = row['arg_id']
+        sent_id = row['predicate']['event_id']
         sentence = row['text']
-        predicate = row['predicate_lemma']
-        ques_str = row["query_question"]
-        ans_str = row["argument_text"]
-        ans_span = row["argument_span"]
-        ans_span = ans_span.split(':')
-        ans_span = [[int(ans_span[0]),int(ans_span[1])]]
-        processed_data.append(
-            [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
+        predicate = row['predicate']['lemma']
+        predicate_role = row['predicate']['event_type']
+        #TODO: for now I am only predicting for existing arguments!
+        for arg in row['arguments']:
+            arg_role = arg['role_type']
+            if 'Time' in arg_role:
+                pass
+            else:
+                if predicate_role in q_dict:
+                    if arg_role in q_dict[predicate_role]:
+                        types = q_dict[predicate_role][arg_role]
+                    else:
+                        print(predicate_role)
+                        print(arg_role)
+                else:
+                    print(predicate_role)
+                    print(arg_role)
+                ans_str = arg["text"]
+                ans_span = arg["span"]
+                ans_span = ans_span.split(':')
+                ans_span = [[int(ans_span[0]), int(ans_span[1])]]
+                for type in types:
+                    if type in type_q_dict:
+                        ques_str = type_q_dict[type]
+                        print(ques_str)
+                        processed_data.append(
+                            [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
