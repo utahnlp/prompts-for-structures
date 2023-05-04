@@ -61,6 +61,7 @@ def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
     q_dict = read_types()
     infile = jsonlines.open(filepath)
     processed_data = []
+    outfile = csv.writer(open('type_questions.csv', 'w'))
     for row in infile:
         sent_id = row['predicate']['event_id']
         sentence = row['text']
@@ -91,6 +92,7 @@ def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
                         print(ques_str)
                         processed_data.append(
                             [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
+                        outfile.writerow([ques_str])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
