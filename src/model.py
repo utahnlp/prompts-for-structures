@@ -241,21 +241,24 @@ if __name__ == "__main__":
 
     ####### STEP 1. Generation
     ### Generate & dump generations and gold
-    if run_generate:
-        _, gold, gens = model.generate(beam_size=20, test_mode=False)
-        #plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
-
-        with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin","wb") as out:
-            pickle.dump(gens, out)
-        with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold","wb") as out:
-            pickle.dump(gold, out) 
+    # if run_generate:
+    #     _, gold, gens = model.generate(beam_size=20, test_mode=False)
+    #     #plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
+    #
+    #     with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin","wb") as out:
+    #         pickle.dump(gens, out)
+    #     with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold","wb") as out:
+    #         pickle.dump(gold, out)
     ### Read Dumps
-    else:
-        with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gens.bin","rb") as out:
-            gens = pickle.load(out)
-        with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
-            gold = pickle.load(out)
-    
+    # else:
+    # with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gens.bin","rb") as out:
+    #     gens = pickle.load(out)
+    # with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
+    #     gold = pickle.load(out)
+    with open(f"./../data/dumps_questions_args/dumps/filtered_gens.bin", "rb") as out:
+        gens = pickle.load(out)
+    with open(f"./../data/dumps_questions_args/dumps/ace_ace_t5_gold","rb") as out:
+        gold = pickle.load(out)
    
     ######## STEP 2. Running Inference
     if run_inference_module:  
