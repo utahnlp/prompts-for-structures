@@ -288,8 +288,11 @@ if __name__ == "__main__":
     ## Unconstrained Evaluation
     print("Unconstrained")
     meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_uncons.txt", "constrained":False}
-    print(gens)
-    uncon_gens = [gen[0]["sentence"] for gen in gens]   #Taking the top path in the beam
+    uncon_gens = []
+    for gen in gens:
+        print(gen)
+        uncon_gens.append(gen[0]["sentence"])
+    #uncon_gens = [gen[0]["sentence"] for gen in gens]   #Taking the top path in the beam
     evaluate(model.data, model.config, uncon_gens, meta)
     ## Constrained Evaluation
     print("Constrained")
