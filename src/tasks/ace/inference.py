@@ -53,7 +53,9 @@ def inference_ace(data: pd.DataFrame, generations, sanity_check) -> List[str]:
             pred_gens = []
             gold_ans = []
             gold_ans_spans = []
-
+        print(generations)
+        print(len(generations))
+        print(len(data))
         # Store answers and the gold answers
         pred_gens.append(generations[cnt_ix])
         gold_ans.append(row["answer"])

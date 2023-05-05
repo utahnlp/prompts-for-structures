@@ -47,5 +47,6 @@ for key, value in arg_dict.items():
     out.append(inner_out)
 with open(f"filtered_gens.bin", "wb") as outfile:
     pickle.dump(out, outfile)
-# with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold", "wb") as out:
-#     pickle.dump(gold, out)
+
+def filter_input_file():
+    pass
