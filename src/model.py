@@ -255,7 +255,7 @@ if __name__ == "__main__":
     #     gens = pickle.load(out)
     # with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
     #     gold = pickle.load(out)
-    with open(f"./../dumps_questions_args/dumps/filtered_gens.bin", "rb") as out:
+    with open(f"./../dumps_questions_args/dumps/filtered_gens2.bin", "rb") as out:
         gens = pickle.load(out)
     with open(f"./../dumps_questions_args/dumps/ace_ace_t5_gold","rb") as out:
         gold = pickle.load(out)
