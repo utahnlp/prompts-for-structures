@@ -5,7 +5,7 @@ from sklearn.metrics import f1_score
 from typing import List
 
 from graph import get_all_cliques
-from utils import right_to_left_search, Config
+from utils import right_to_left_search, Config, get_modified_ans
 
 
 def get_cluster(clusters, ent_id):
@@ -20,7 +20,12 @@ def create_coref_dumps(rel_rows, gold_clus, pred_clus, g_base_id, p_base_id, gol
     gold_ent_tags = []
     pred_ent_tags = []
     mention_traversed = []
-    
+   
+    with open(gold_dump, "a+") as f:
+        f.write(f"""#begin document ({rel_rows[0]['doc_id']});\n""")
+    with open(pred_dump, "a+") as f:
+        f.write(f"""#begin document ({rel_rows[0]['doc_id']});\n""")
+
 
     for row in rel_rows:
         doc_id = row['doc_id']
@@ -84,9 +89,10 @@ def create_coref_dumps(rel_rows, gold_clus, pred_clus, g_base_id, p_base_id, gol
 
     with open(gold_dump, "a+") as f:
         f.write(f"""\n""")
+        f.write("#end document\n")
     with open(pred_dump, "a+") as f:
         f.write(f"""\n""")
-
+        f.write("#end document\n")
 
 
     return g_base_id+len(gold_clus), p_base_id+len(pred_clus)
@@ -100,6 +106,8 @@ def eval_ontonotes(data, preds, meta):
     gold_ans = []
     gold_relation_ids = []
     pred_relation_ids = []
+    all_relation_ids = []
+    post_inf_ans = []
     rel_rows = []
     max_nodes = 0
 
@@ -107,12 +115,15 @@ def eval_ontonotes(data, preds, meta):
     pred_base_id = 0
 
     with open(meta['gold_dump_file'], "w+") as f:
-        f.write("#begin document (Coref);\n")
+        f.write("")
+        #f.write("#begin document (Coref);\n")
     with open(meta['pred_dump_file'], "w+") as f:
-        f.write("#begin document (Coref);\n")
+        f.write("")
+        #f.write("#begin document (Coref);\n")
 
     g_viol = 0
     p_viol = 0
+    num_transitivity = 0
 
     for ix, row in data.iterrows():
         if doc == None:
@@ -123,17 +134,22 @@ def eval_ontonotes(data, preds, meta):
             #    gold_clus, gold_violations = get_all_cliques(gold_relation_ids, max_nodes)
             #    pred_clus, pred_violations = get_all_cliques(pred_relation_ids, max_nodes)
         
-            gold_clus, gold_violations = right_to_left_search(gold_relation_ids, max_nodes)
-            pred_clus, pred_violations = right_to_left_search(pred_relation_ids, max_nodes)
+            gold_clus, gold_violations  = right_to_left_search(gold_relation_ids, max_nodes)
+            pred_clus, pred_violations  = right_to_left_search(pred_relation_ids, max_nodes)
 
             g_viol += gold_violations
             p_viol += pred_violations
+            num_transitivity += (max_nodes)*(max_nodes-1)*(max_nodes-2) 
+            if not meta['constrained']:
+                modified_ans = get_modified_ans(pred_clus, all_relation_ids)
+                post_inf_ans.extend(modified_ans)
 
             gold_base_id, pred_base_id = create_coref_dumps(rel_rows, gold_clus, pred_clus, gold_base_id, pred_base_id, meta['gold_dump_file'], meta['pred_dump_file'])
 
             # Refresh List
             gold_relation_ids = []
             pred_relation_ids = []
+            all_relation_ids = []
             doc = row["doc_id"]
             max_nodes = 0
             rel_rows = []
@@ -143,25 +159,42 @@ def eval_ontonotes(data, preds, meta):
         rel_rows.append(row)
         # Curate edges to form the clusters ultimately
 
-        if row['in_order']:
-            if row['answer'] == 'Yes':
-                gold_relation_ids.append([row['mention_id1'], row["mention_id2"]])
-            if preds[ix] == 'Yes':
-                pred_relation_ids.append([row['mention_id1'], row["mention_id2"]])
-        else:
-            if row['answer'] == 'Yes':
-                gold_relation_ids.append([row['mention_id1'], row["mention_id2"]])
-            if preds[ix] == 'Yes':
-                pred_relation_ids.append([row['mention_id1'], row["mention_id2"]])
-    
-    f1 = f1_score(gold_ans, preds, average='macro')
-    print(f"F1 Score: {f1}")
-    print(f"Gold Violations: {g_viol}")
-    print(f"Prediction Violations: {p_viol}")
+        
+        if row['answer'] == 'Yes':
+            gold_relation_ids.append([row['mention_id1'], row["mention_id2"]])
+        if preds[ix] == 'Yes':
+            pred_relation_ids.append([row['mention_id1'], row["mention_id2"]])
+        all_relation_ids.append([row['mention_id1'], row["mention_id2"]])
 
-    with open(meta['gold_dump_file'], "a") as f:
-        f.write("#end document")
-    with open(meta['pred_dump_file'], "a") as f:
-        f.write("#end document")
+
+    # For the last document
+    gold_clus, gold_violations = right_to_left_search(gold_relation_ids, max_nodes)
+    pred_clus, pred_violations = right_to_left_search(pred_relation_ids, max_nodes)
+
+    g_viol += gold_violations
+    p_viol += pred_violations
+    num_transitivity += (max_nodes)*(max_nodes-1)*(max_nodes-2) 
+
+    if not meta['constrained']:
+        modified_ans = get_modified_ans(pred_clus, all_relation_ids)
+        post_inf_ans.extend(modified_ans)
+
+    _, _ = create_coref_dumps(rel_rows, gold_clus, pred_clus, gold_base_id, pred_base_id, meta['gold_dump_file'], meta['pred_dump_file'])
+
+
+
+    f1 = f1_score(gold_ans, preds, average='macro')
+    print(f"F1 Score (Pre-inference): {f1}")
+    if not meta['constrained']:
+        f1_post = f1_score(gold_ans, post_inf_ans, average='macro')
+        print(f"F1 Score (Post-inference): {f1_post}")
+    print(f"Gold Violations: {g_viol}")
+    print(f"Transitivity Violations (Prediciton): {p_viol}")
+    print(f"Total transitivity checks: {num_transitivity}")
+
+    #with open(meta['gold_dump_file'], "a") as f:
+    #    f.write("#end document")
+    #with open(meta['pred_dump_file'], "a") as f:
+    #    f.write("#end document")
 
 

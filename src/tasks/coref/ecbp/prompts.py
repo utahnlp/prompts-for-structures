@@ -39,6 +39,9 @@ def prompt_coref_ecbplus(data: pd.DataFrame, config: Config) -> Tuple[List[str],
                 elif config.prompt_style == "mcq":
                     prompts.append(f"""copa choice1: Yes choice2: premise: {sent} question: Does {row["entity1"]} refer to {row["entity2"]}? Yes or No?""")
             elif config.model in ["macaw-3b"]:
+                # The if condition below is to counter OOM errors for GENIA
+                if config.dataset_name == "genia":
+                    sent = " ".join(sent.split()[:90]) 
                 prompts.append(f"""$answer$ ; $mcoptions$=(A) Yes (B) No  ; {sent} Does {row["entity1"]} refer to {row["entity2"]}?""")
                 
             gold.append(row["answer"])

@@ -7,6 +7,7 @@ from prompts import generate_prompts
 from inference import run_inference
 
 import argparse
+import numpy as np
 import pandas as pd
 import pickle
 from pathlib import Path
@@ -15,7 +16,7 @@ from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from typing import Union
 
-GPU_ID = "1"
+GPU_ID = "0"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
 #device = "cpu"
 torch.manual_seed(2121)
@@ -41,13 +42,14 @@ class PromptModel():
                     task = self.config.task_name,
                     dataset = self.config.dataset_name
                 )
+        
         print(f"Total number of queries: {len(self.data)}")
         #ids = 21
         #print(self.data["sentence"].iloc[ids])
         #print(self.data["entity1"].iloc[ids])
         #print(self.data["entity2"].iloc[ids])
         #print(self.data["answer"].iloc[ids])
-        #exit()         
+         
         self.init_model(self.config.model)
 
 
@@ -68,6 +70,10 @@ class PromptModel():
         elif model_name == "unified-qa":
             self.tokenizer = T5Tokenizer.from_pretrained("allenai/unifiedqa-t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("allenai/unifiedqa-t5-large").to(device)
+        elif model_name[:12] == "unifiedqa-v2":
+            self.tokenizer = T5Tokenizer.from_pretrained(f"allenai/{model_name}-1251000")
+            self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}-1251000").to(device)
+
         elif model_name == "macaw-3b":
             self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-3b")
             self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-3b").to(device)
@@ -125,6 +131,16 @@ class PromptModel():
         do_calibrate = self.config.do_calibrate
         generation = [] # The list contains all the generation from the model
 
+        # This conditions checks for differing priors 
+        # This is required since out models model joint probability 
+        # instead of conditional. To achieve conditionals, we must subtract 
+        # prior probability from the joint. However, if for a structure, these 
+        # are negligible, it doesn't matter. This sub-experiment checks for these values
+        condition_prob = False
+        if condition_prob:
+            c_prob_std = []
+            curr_id = None
+
         ####### Paramters for generation
         restriction, max_len, calib_prompt = restrict_vocab(self.config) # Restrictions on generation vocabulary and dummy prompts
 
@@ -135,7 +151,6 @@ class PromptModel():
 
         if restriction != None:
             calib_order = restriction.copy()
-
         # Calibrate if you have a restricted vocabulary
         if do_calibrate:
             calib_out, calib_order = self.calibrate(beam_size, restrict_ans=restriction.copy(), max_len=max_len, calib_prompt=calib_prompt)
@@ -145,16 +160,25 @@ class PromptModel():
 
         # Iterate over prompts
         for ix, prompt in tqdm(enumerate(prompts)):
-            #if ix < 13030:
-            #    continue
+            if condition_prob:
+                if curr_id == None:
+                    priors = []
+                    curr_id = self.data['doc_id'].iloc[ix]
+                if curr_id != self.data['doc_id'].iloc[ix]:
+                    c_prob_std.append(np.std(priors))
+                    priors = []
+                    curr_id = self.data['doc_id'].iloc[ix]
+
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
-            #print(input_ids.shape)
+        
             with torch.no_grad():
                 if self.config.task_name in ['coref']:
                     outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
+                    if condition_prob:
+                        cond_outs = self.model.generate(input_ids.to(device), return_dict_in_generate=True, output_scores=True)
+                        priors.append(np.log(torch.softmax(cond_outs.scores[0],dim=1)[0][self.tokenizer.eos_token_id].cpu().numpy()))
                 else:
                     outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True)
-
 
             if test_mode:
                 if ix == 76:
@@ -227,7 +251,17 @@ class PromptModel():
                         prompt_gens.append({"sentence":l1, "score":l2})
                 
             generation.append(prompt_gens)
-            torch.cuda.empty_cache() 
+            torch.cuda.empty_cache()
+
+        if condition_prob:
+            c_prob_std.append(np.std(priors))
+        
+        #print(f"Mean of standard deviation of priors: {np.mean(c_prob_std)}")
+        #print(f"Std dev of standard deviation of priors: {np.std(c_prob_std)}")
+        #print(f"Max standard deviation of priors: {np.max(c_prob_std)}\n")
+
+
+
         return prompts, gold, generation
 
 
@@ -257,7 +291,7 @@ if __name__ == "__main__":
     model = PromptModel(config)
     
     # Intermediary dump data
-    task_name = config.task_name           #"srl"#"cref"
+    task_name = config.task_name           #"srl"#"coref"
     dataset_name = config.dataset_name                         #"qasrl2"     #"ecbp"
     model_name = config.model                           #"t53b"               #"macaw3b"
     read_spec = config.read_spec            #"highlight_fullcontext"
@@ -271,8 +305,7 @@ if __name__ == "__main__":
     ####### STEP 1. Generation
     ### Generate & dump generations and gold
     if run_generate:
-        _, gold, gens = model.generate(beam_size=20, test_mode=False)
-        
+        _, gold, gens = model.generate(beam_size=20, test_mode=False) 
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin","wb") as out:
             pickle.dump(gens, out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gold","wb") as out:
@@ -313,6 +346,19 @@ if __name__ == "__main__":
     
     
     ######### STEP 3. Evaluation
+    if config.task_name == "coref":
+        # Baseline Coref
+        print("Single Cluster Baseline")
+        meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_yes.txt", "constrained":True}
+        yes_gens = ["Yes"]*len(gold)   #Taking the top path in the beam
+        evaluate(model.data, model.config, yes_gens, meta)
+
+        print("Singleton Baseline")
+        meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_no.txt", "constrained":True}
+        no_gens = ["No"]*len(gold)   #Taking the top path in the beam
+        evaluate(model.data, model.config, no_gens, meta)
+
+
     ## Unconstrained Evaluation
     print("Unconstrained")
     meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_uncons.txt", "constrained":False}

@@ -25,7 +25,7 @@ def prompt_qasrl2(data: pd.DataFrame, config) -> Tuple[List[str], List[str]]:
         for ix, row in data.iterrows():
             if config.model in ["t5","t5-11b","t5-3b","t5-small","t5-base"]:
                 prompts.append(f"""question: {row["question"]} context: {" ".join(row["sentence"])} """)
-            elif config.model == "unified-qa":
+            elif (config.model == "unified-qa") or (config.model[:12] == "unifiedqa-v2"):
                 prompts.append(f"""{row["question"]} \\n {" ".join(row["sentence"])} """)
             elif config.model == "flan-t5-xl":
                 prompts.append(f"""{" ".join(row["sentence"])} \\n In the above sentence, {row["question"]}""")

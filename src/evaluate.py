@@ -19,7 +19,8 @@ EVALUATION_DICT = {
                 },
             "coref": {
                     "ecbplus": eval_ecbplus,
-                    "ontonotes": eval_ontonotes
+                    "ontonotes": eval_ontonotes,
+                    "genia": eval_ontonotes
                 }
         
         }

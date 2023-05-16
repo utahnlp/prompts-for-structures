@@ -258,6 +258,25 @@ def right_to_left_search(rel_ids, max_mentions):
     
     clusters = [[0]]
     viol = 0
+    transitivity_viol = 0
+
+    # Computing transivity violations
+    for i in range(1, max_mentions):
+        for j in range(i+1, max_mentions):
+            for k in range(j+1, max_mentions):
+                trans_sum = 0
+                if rel_mat[i][j] == "Y":
+                    trans_sum += 1
+                if rel_mat[j][k] == "Y":
+                    trans_sum += 1
+                if rel_mat[i][k] == "Y":
+                    trans_sum += 1
+                
+                # The transitivity constrint is broken if exactly two 
+                # edges exists between the mentions
+                if trans_sum == 2:
+                    transitivity_viol += 1
+
 
     for i in range(1,max_mentions):
         flag = True
@@ -281,9 +300,37 @@ def right_to_left_search(rel_ids, max_mentions):
         if flag:
             clusters.append([i])
         
-    
-    return clusters, viol
+       
+    return clusters, transitivity_viol
 
+
+
+def get_modified_ans(clusters, all_relations):
+    # In case the where there were violations and corrections
+    # were to be made, we need to get the modified answers for the prompts
+    
+    modified_ans = []
+    for rel in all_relations:
+        ent1_clus = None
+        ent2_clus = None
+        for c_ix, clus in enumerate(clusters):
+            if rel[0] in clus:
+                ent1_clus = c_ix 
+                break
+        for c_ix, clus in enumerate(clusters):
+            if rel[1] in clus:
+                ent2_clus = c_ix 
+                break
+
+        assert ent1_clus != None
+        assert ent2_clus != None
+
+        if ent1_clus == ent2_clus:
+            modified_ans.append("Yes")
+        else:
+            modified_ans.append("No")
+    
+    return modified_ans.copy() 
 
 
 if __name__ == "__main__":

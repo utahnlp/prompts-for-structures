@@ -13,7 +13,7 @@ from tasks.srl.wikisrl.preprocess import  preprocess_wikisrl
 from tasks.srl.qasrl2.preprocess import preprocess_qasrl2
 from tasks.coref.ecbp.preprocess import preprocess_ecbplus_coref
 from tasks.coref.ontonotes.preprocess import preprocess_ontonotes_coref
-
+from tasks.coref.genia.preprocess import preprocess_genia_coref
 
 
 PREPROCESS_DICT = {
@@ -23,7 +23,8 @@ PREPROCESS_DICT = {
                 },
             "coref" : { 
                     "ecbplus": preprocess_ecbplus_coref,
-                    "ontonotes": preprocess_ontonotes_coref
+                    "ontonotes": preprocess_ontonotes_coref,
+                    "genia": preprocess_genia_coref
                 },
 
         }

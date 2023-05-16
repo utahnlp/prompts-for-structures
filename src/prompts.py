@@ -16,7 +16,8 @@ PROMPT_DICT = {
                 },
             "coref":{
                     "ecbplus": prompt_coref_ecbplus,
-                    "ontonotes": prompt_coref_ecbplus
+                    "ontonotes": prompt_coref_ecbplus,
+                    "genia": prompt_coref_ecbplus
                 },
         }
 
