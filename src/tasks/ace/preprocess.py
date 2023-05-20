@@ -171,6 +171,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         predicate = row['predicate_lemma']
         ques_str = row["query_question"]
         ques_str = ques_str+' '+'in '+row["text"]
+        print(ques_str)
         ans_str = row["argument_text"]
         ans_span = row["argument_span"]
         ans_span = ans_span.split(':')
