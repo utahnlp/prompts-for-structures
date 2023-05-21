@@ -116,7 +116,7 @@ PREPROCESS_DICT = {
                     "ecbplus": preprocess_ecbplus_coref,
                     "ontonotes": preprocess_ontonotes_coref
                 },
-            "ace" : {"ace": preprocess_ace_questions}
+            "ace" : {"ace": preprocess_ace}
         }
 
 
