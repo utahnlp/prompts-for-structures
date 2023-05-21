@@ -137,8 +137,9 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
                     print(predicate_role)
                     print(arg_role)
                 ques_str = question
-                ques_str = "given the predicate: " + row["text"] + " " + ques_str
+                #ques_str = "given the predicate: " + row["text"] + " " + ques_str
                 #ques_str = ques_str + ' ' + 'in ' + row["text"]
+                ques_str = question[:-1]+' of '+row["text"]+'?'
                 ans_str = arg["text"]
                 ans_span = arg["span"]
                 ans_span = ans_span.split(':')
