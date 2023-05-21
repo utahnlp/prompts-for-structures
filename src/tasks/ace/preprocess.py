@@ -137,7 +137,8 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
                     print(predicate_role)
                     print(arg_role)
                 ques_str = question
-                ques_str = ques_str + ' ' + 'in ' + row["text"]
+                ques_str = "given the predicate: " + row["text"] + " " + ques_str
+                #ques_str = ques_str + ' ' + 'in ' + row["text"]
                 ans_str = arg["text"]
                 ans_span = arg["span"]
                 ans_span = ans_span.split(':')
@@ -171,8 +172,6 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         sentence = row['text']
         predicate = row['predicate_lemma']
         ques_str = row["query_question"]
-        #ques_str = ques_str+' '+'in '+row["text"]
-        ques_str = "given the predicate: "+row["text"]+" "+ques_str
         ans_str = row["argument_text"]
         ans_span = row["argument_span"]
         ans_span = ans_span.split(':')
