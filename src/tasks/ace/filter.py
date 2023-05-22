@@ -77,87 +77,88 @@ for id_row, row in zip(id_arg_file, gens):
     arg_dict[id_row[1]+id_row[2]+id_row[4]] = row
 
 
-infile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev.jsonl')
-attrib_dict = read_gold_attributes()
-q_dict = read_questions()
-for row in infile:
-    sent_id = row['predicate']['event_id']
-    sentence = row['text']
-    predicate = row['predicate']['lemma']
-    predicate_role = row['predicate']['event_type']
-    # TODO: for now I am only predicting for existing arguments!
-    for arg in row['arguments']:
-        arg_role = arg['role_type']
-        if 'Time' in arg_role:
-            pass
-        else:
-            if predicate_role in q_dict:
-                if arg_role in q_dict[predicate_role]:
-                    question = q_dict[predicate_role][arg_role]
-                else:
-                    print(predicate_role)
-                    print(arg_role)
-                    outfile.writerow([predicate_role, arg_role])
-            else:
-                print(predicate_role)
-                print(arg_role)
-            ques_str = question
-            ans_str = arg["text"]
-            ans_span = arg["span"]
-            ans_span = ans_span.split(':')
-            ans_span = [[int(ans_span[0]), int(ans_span[1])]]
-            arg_type = attrib_dict[arg['arg_id']]
-            predictions = arg_dict[sent_id+predicate+arg_role]
-            predictions = [pred['sentence'] for pred in predictions]
-            print(predicate)
-            print(predicate_role)
-            print(sent_id)
-            print(ans_str)
-            print(ans_span)
-            print(arg_role)
-            print(arg_type)
-            print(predictions)
-            print(question)
-            outfile.writerow({'sentence':sentence, 'predicate':predicate, 'event_type':predicate_role, 'event_id':sent_id, 'gold_argument':ans_str, 'gold_span': ans_span, 'role_type':arg_role, 'arg_type':arg_type, 'predicted_arguments':'%%%'.join(predictions), 'arg_question':question})
-
-out = []
-for key, value in arg_dict.items():
-    inner_out = []
-    types = type_dict[key]
-    covered = {}
-    for type_list in types:
-        for t in type_list:
-            covered[t['sentence']] = 'yes'
-    first_sent = value[0]
-    for sent in value:
-        sentence = sent['sentence']
-        if sentence in covered:
-            print('yes')
-            inner_out.append(sent)
-        else:
-            print('no')
-    #TODO: think about this
-    if len(inner_out)==0:
-        inner_out.append(first_sent)
-    out.append(inner_out)
-with open(f"filtered_gens.bin", "wb") as outfile:
-    pickle.dump(out, outfile)
-
-# def filter_input_file():
-#     infile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev.jsonl')
-#     outfile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev_filtered.jsonl', mode='w')
+# infile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev.jsonl')
+# attrib_dict = read_gold_attributes()
+# q_dict = read_questions()
+# for row in infile:
+#     sent_id = row['predicate']['event_id']
+#     sentence = row['text']
+#     predicate = row['predicate']['lemma']
+#     predicate_role = row['predicate']['event_type']
+#     # TODO: for now I am only predicting for existing arguments!
+#     for arg in row['arguments']:
+#         arg_role = arg['role_type']
+#         if 'Time' in arg_role:
+#             pass
+#         else:
+#             if predicate_role in q_dict:
+#                 if arg_role in q_dict[predicate_role]:
+#                     question = q_dict[predicate_role][arg_role]
+#                 else:
+#                     print(predicate_role)
+#                     print(arg_role)
+#                     outfile.writerow([predicate_role, arg_role])
+#             else:
+#                 print(predicate_role)
+#                 print(arg_role)
+#             ques_str = question
+#             ans_str = arg["text"]
+#             ans_span = arg["span"]
+#             ans_span = ans_span.split(':')
+#             ans_span = [[int(ans_span[0]), int(ans_span[1])]]
+#             arg_type = attrib_dict[arg['arg_id']]
+#             predictions = arg_dict[sent_id+predicate+arg_role]
+#             predictions = [pred['sentence'] for pred in predictions]
+#             print(predicate)
+#             print(predicate_role)
+#             print(sent_id)
+#             print(ans_str)
+#             print(ans_span)
+#             print(arg_role)
+#             print(arg_type)
+#             print(predictions)
+#             print(question)
+#             outfile.writerow({'sentence':sentence, 'predicate':predicate, 'event_type':predicate_role, 'event_id':sent_id, 'gold_argument':ans_str, 'gold_span': ans_span, 'role_type':arg_role, 'arg_type':arg_type, 'predicted_arguments':'%%%'.join(predictions), 'arg_question':question})
+#
+# out = []
+# for key, value in arg_dict.items():
+#     inner_out = []
+#     types = type_dict[key]
 #     covered = {}
-#     for row in infile:
-#         sent_id = row['predicate']['event_id']
-#         predicate = row['predicate']['lemma']
-#         out = row
-#         arg_list = []
-#         for arg in row['arguments']:
-#             arg_role = arg['role_type']
-#             if sent_id+predicate+arg_role not in covered:
-#                 arg_list.append(arg)
-#                 covered[sent_id+predicate+arg_role] = True
-#         out['arguments'] = arg_list
-#         outfile.write(out)
+#     for type_list in types:
+#         for t in type_list:
+#             covered[t['sentence']] = 'yes'
+#     first_sent = value[0]
+#     for sent in value:
+#         sentence = sent['sentence']
+#         if sentence in covered:
+#             print('yes')
+#             inner_out.append(sent)
+#         else:
+#             print('no')
+#     #TODO: think about this
+#     if len(inner_out)==0:
+#         inner_out.append(first_sent)
+#     out.append(inner_out)
+# with open(f"filtered_gens.bin", "wb") as outfile:
+#     pickle.dump(out, outfile)
 
-#filter_input_file()
+def filter_input_file():
+    infile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev.jsonl')
+    outfile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev_filtered_by_pred_arg.jsonl', mode='w')
+    covered = {}
+    for row in infile:
+        sent_id = row['predicate']['event_id']
+        predicate = row['predicate']['span']
+        out = row
+        arg_list = []
+        for arg in row['arguments']:
+            arg_role = arg['span']
+            if sent_id+predicate+arg_role not in covered:
+                arg_list.append(arg)
+                covered[sent_id+predicate+arg_role] = True
+        if len(arg_list)>0:
+            out['arguments'] = arg_list
+            outfile.write(out)
+
+filter_input_file()
