@@ -12,7 +12,7 @@ from utils import dataset_document_iterator
 from tasks.srl.wikisrl.preprocess import  preprocess_wikisrl
 from tasks.srl.qasrl2.preprocess import preprocess_qasrl2
 from tasks.coref.ecbp.preprocess import preprocess_ecbplus_coref
-from tasks.ace.preprocess import preprocess_ace
+from tasks.ace.preprocess import preprocess_ace_questions
 
 
 def preprocess_ontonotes_coref(filepath):
@@ -116,7 +116,7 @@ PREPROCESS_DICT = {
                     "ecbplus": preprocess_ecbplus_coref,
                     "ontonotes": preprocess_ontonotes_coref
                 },
-            "ace" : {"ace": preprocess_ace}
+            "ace" : {"ace": preprocess_ace_questions}
         }
 
 
