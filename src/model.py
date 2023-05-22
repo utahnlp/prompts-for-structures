@@ -125,6 +125,7 @@ class PromptModel():
 
         # Iterate over prompts
         for ix, prompt in tqdm(enumerate(prompts)):
+            print(prompt)
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
             
             with torch.no_grad():
