@@ -27,7 +27,6 @@ def prompt_ace(data: pd.DataFrame, config) -> Tuple[List[str], List[str]]:
                 prompts.append(f"""question: {row["question"]} context: {row["sentence"]} """)
             elif config.model == "unified-qa":
                 prompts.append(f"""{row["question"]} \n {row["sentence"]} """)
-                print(f"""{row["question"]} \n {row["sentence"]} """)
             gold.append(row["answer"])
 
     return prompts, gold

@@ -33,14 +33,14 @@ def read_types():
 
 def read_questions():
     # predicate : argument : question
-    q_dict = defaultdict(lambda : defaultdict(lambda : ''))
-    infile = csv.reader(open('../data/questions/type_question_map.tsv'), delimiter='\t')
+    q_dict = defaultdict(lambda : defaultdict(lambda : []))
+    infile = csv.reader(open('../data/questions/type_question_map2.tsv'), delimiter='\t')
 
     for row in infile:
         #if not 'Time' in row[0]:
         predicate, arg = row[0].split('_')
         predicate = '_'.join(predicate.split('.'))
-        q_dict[predicate][arg] = row[1]
+        q_dict[predicate][arg].append(row[1])
 
     return q_dict
 
@@ -116,6 +116,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
     infile = jsonlines.open(filepath)
     processed_data = []
     outfile = csv.writer(open('argument_questions.csv', 'w'))
+    covered = {}
     for row in infile:
         sent_id = row['predicate']['event_id']
         sentence = row['text']
@@ -130,7 +131,10 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             # else:
             if predicate_role in q_dict:
                 if arg_role in q_dict[predicate_role]:
-                    question = q_dict[predicate_role][arg_role]
+                    if sent_id+predicate+arg_role in covered:
+                        question = q_dict[predicate_role][arg_role][-1]
+                    else:
+                        question = q_dict[predicate_role][arg_role][0]
                 else:
                     print(predicate_role)
                     print(arg_role)
@@ -142,12 +146,13 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             if ques_str.startswith('Where does the event'):
                 ques_str = re.sub('event', predicate_string, ques_str)
             #ques_str = "given the predicate: " + row["text"] + " " + ques_str
-            ques_str = ques_str + ' ' + 'in ' + predicate_string
+            #ques_str = ques_str + ' ' + 'in ' + predicate_string
             #ques_str = ques_str[:-1]+' of '+row["text"]+'?'
             ans_str = arg["text"]
             ans_span = arg["span"]
             ans_span = ans_span.split(':')
             ans_span = [[int(ans_span[0]),int(ans_span[1])]]
+            covered[sent_id+predicate+arg_role]=True
             processed_data.append(
                 [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
             outfile.writerow([ques_str, sent_id, predicate, predicate_role, arg_role])
