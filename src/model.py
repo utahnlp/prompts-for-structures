@@ -61,9 +61,12 @@ class PromptModel():
         if model_name == "t5":
             self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
             self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
-        elif model_name in ["t5-small","t5-base","t5-11b","t5-3b"]:
+        elif model_name in ["t5-small","t5-base","t5-3b"]:
             self.tokenizer = T5Tokenizer.from_pretrained(model_name)
             self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
+        elif model_name in ["t5-11b"]:
+            self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+            self.model = T5ForConditionalGeneration.from_pretrained(model_name, load_in_8bit=True, device_map='auto')#.to(device)
         elif model_name in ["flan-t5-xl"]:
             self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl")
             self.model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-xl").to(device)
@@ -170,7 +173,7 @@ class PromptModel():
                     curr_id = self.data['doc_id'].iloc[ix]
 
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
-        
+            
             with torch.no_grad():
                 if self.config.task_name in ['coref']:
                     outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)

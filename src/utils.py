@@ -31,7 +31,15 @@ class Config():
         self.dataset_name = config.get('Meta','dataset_name')
         self.data_dir = config.get('Data','data_dir')
         self.data_file = config.get('Data','data_file')
+        self.few_shot_file = config.get('Data', 'few_shot_file')
         self.mode = config.get('Run','mode')
+        self.few_shot = self.check_bool(config.get('Run','few_shot'))
+
+        self.num_shots = int(config.get('Few Shot', 'num_shots'))
+        self.shot_type = config.get('Few Shot', 'shot_type')
+        self.shot_seed = int(config.get('Few Shot', 'shot_seed'))
+        self.order_num = int(config.get('Few Shot', 'order_num'))
+
         self.model = config.get('Model','model')
         self.prompt_type = config.get('Prompt','prompt_type')
         self.prompt_style = config.get('Prompt','prompt_style')
