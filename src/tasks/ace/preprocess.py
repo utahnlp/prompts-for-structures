@@ -151,7 +151,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             if ques_str.startswith('When does it'):
                 ques_str = re.sub('it', 'the '+predicate, ques_str)
             ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-            ques_str = re.sub('?', ' of the'+predicate+'?', ques_str)
+            ques_str = re.sub('\?', ' of the'+predicate+'?', ques_str)
             #ques_str = "given the predicate: " + row["text"] + " " + ques_str
             #ques_str = ques_str + ' ' + 'in ' + predicate_string
             #ques_str = ques_str[:-1]+' of '+row["text"]+'?'
