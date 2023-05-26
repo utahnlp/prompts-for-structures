@@ -134,11 +134,8 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
                 if arg_role in q_dict[predicate_role]:
                     if sent_id+predicate+arg_role in covered:
                         question = q_dict[predicate_role][arg_role][-1]
-                        print(question)
                     else:
                         question = q_dict[predicate_role][arg_role][0]
-                        print(question)
-                        print('hihi')
                 else:
                     print(predicate_role)
                     print(arg_role)
@@ -151,7 +148,8 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             if ques_str.startswith('When does it'):
                 ques_str = re.sub('it', 'the '+predicate, ques_str)
             ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-            ques_str = re.sub('\?', ' of the'+predicate+'?', ques_str)
+            sentence = sentence + ' The event the question is asking about is: '+predicate_string
+            #ques_str = re.sub('\?', ' of the'+predicate+'?', ques_str)
             #ques_str = "given the predicate: " + row["text"] + " " + ques_str
             #ques_str = ques_str + ' ' + 'in ' + predicate_string
             #ques_str = ques_str[:-1]+' of '+row["text"]+'?'
