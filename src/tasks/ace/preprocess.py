@@ -191,6 +191,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         ques_str = ques_str + ' ' + 'in ' + predicate
         predicate_role = row['event_type']
         arg_role = row['role_type']
+        print(q_dict)
         if predicate_role in q_dict:
             print('ok')
             if arg_role in q_dict[predicate_role]:
