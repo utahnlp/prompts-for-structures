@@ -189,10 +189,8 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         predicate = row['predicate_lemma']
         ques_str = row["query_question"]
         ques_str = ques_str + ' ' + 'in ' + predicate
-        event_type = row['event_type']
-        predicate_role = event_type.split('.')[0]
-        arg_role = event_type.split('.')[1]
-        print(q_dict)
+        predicate_role = row['event_type']
+        arg_role = row['role_type']
         if predicate_role in q_dict:
             if arg_role in q_dict[predicate_role]:
                 question = q_dict[predicate_role][arg_role][0]
