@@ -135,6 +135,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
                     if sent_id+predicate+arg_role in covered:
                         question = q_dict[predicate_role][arg_role][-1]
                     else:
+                        print('hihi')
                         question = q_dict[predicate_role][arg_role][0]
                 else:
                     print(predicate_role)

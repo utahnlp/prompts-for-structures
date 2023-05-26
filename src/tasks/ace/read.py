@@ -40,12 +40,12 @@ def read_questions():
 
 
 
-id_arg_file = csv.reader(open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/dumps_questions_args3/argument_questions.csv'))
+id_arg_file = csv.reader(open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/dumps_questions_args4/argument_questions.csv'))
 
 
-with open(f"/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/dumps_questions_args3/ace_ace_t5-3b_gens.bin", "rb") as out:
+with open(f"/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/dumps_questions_args4/ace_ace_t5-3b_gens.bin", "rb") as out:
     gens = pickle.load(out)
-with open(f"/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/dumps_questions_args3/ace_ace_t5-3b_gold", "rb") as out:
+with open(f"/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/dumps_questions_args4/ace_ace_t5-3b_gold", "rb") as out:
     gold = pickle.load(out)
 
 outfile = csv.DictWriter(open('readable_argument_preds_improved.tsv', 'w'), fieldnames=['sentence', 'predicate', 'event_type', 'event_id', 'gold_argument', 'gold_span', 'role_type', 'arg_type', 'predicted_arguments', 'arg_question'])
