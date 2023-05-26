@@ -196,6 +196,11 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
             if arg_role in q_dict[predicate_role]:
                 question = q_dict[predicate_role][arg_role][0]
         ques_str = question
+        if ques_str.startswith('Where does the event'):
+            ques_str = re.sub('event', predicate, ques_str)
+        if ques_str.startswith('When does it'):
+            ques_str = re.sub('it', 'the ' + predicate, ques_str)
+        ques_str = re.sub('the event', 'the ' + predicate, ques_str)
         ans_str = row["argument_text"]
         ans_span = row["argument_span"]
         ans_span = ans_span.split(':')
