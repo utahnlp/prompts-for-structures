@@ -116,7 +116,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
     print(q_dict)
     infile = jsonlines.open(filepath)
     processed_data = []
-    outfile = csv.writer(open('argument_questions.csv', 'w'))
+    outfile = csv.writer(open('/home/valentinap/workspace/prompts-for-structures/dumps/argument_questions.csv', 'w'))
     covered = {}
     for row in infile:
         sent_id = row['predicate']['event_id']
@@ -147,10 +147,11 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
                 print(arg_role)
             ques_str = question
             if ques_str.startswith('Where does the event'):
-                ques_str = re.sub('event', predicate_string, ques_str)
+                ques_str = re.sub('event', predicate, ques_str)
             if ques_str.startswith('When does it'):
-                ques_str = re.sub('it', 'the '+predicate_string, ques_str)
-            ques_str = re.sub('the event', 'the ' + predicate_string, ques_str)
+                ques_str = re.sub('it', 'the '+predicate, ques_str)
+            ques_str = re.sub('the event', 'the ' + predicate, ques_str)
+            ques_str = re.sub('?', ' of the'+predicate+'?', ques_str)
             #ques_str = "given the predicate: " + row["text"] + " " + ques_str
             #ques_str = ques_str + ' ' + 'in ' + predicate_string
             #ques_str = ques_str[:-1]+' of '+row["text"]+'?'

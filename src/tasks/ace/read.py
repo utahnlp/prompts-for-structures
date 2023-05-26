@@ -54,12 +54,14 @@ outfile.writeheader()
 
 # id:pred:arg : [preds]
 arg_dict = defaultdict(lambda : [])
+qs = []
 for id_row, row in zip(id_arg_file, gens):
     arg_dict[id_row[1]+id_row[2]+id_row[4]] = row
-
+    qs.append(id_row[0])
 
 infile = jsonlines.open('/Users/valentinapyatkin/PycharmProjects/prompts-for-structures/data/ace_dev_filtered_by_pred_arg.jsonl')
 q_dict = read_questions()
+counter = 0
 for row in infile:
     sent_id = row['predicate']['event_id']
     sentence = row['text']
@@ -68,22 +70,14 @@ for row in infile:
     # TODO: for now I am only predicting for existing arguments!
     for arg in row['arguments']:
         arg_role = arg['role_type']
-        if predicate_role in q_dict:
-            if arg_role in q_dict[predicate_role]:
-                question = q_dict[predicate_role][arg_role]
-            else:
-                print(predicate_role)
-                print(arg_role)
-        else:
-            print(predicate_role)
-            print(arg_role)
-        ques_str = question
         ans_str = arg["text"]
         ans_span = arg["span"]
         ans_span = ans_span.split(':')
         ans_span = [[int(ans_span[0]), int(ans_span[1])]]
+        question = qs[counter]
         predictions = arg_dict[sent_id+predicate+arg_role]
         predictions = [pred['sentence'] for pred in predictions]
+        counter += 1
         outfile.writerow({'sentence':sentence, 'predicate':predicate, 'event_type':predicate_role, 'event_id':sent_id, 'gold_argument':ans_str, 'gold_span': ans_span, 'role_type':arg_role, 'predicted_arguments':'%%%'.join(predictions), 'arg_question':question})
 
 
