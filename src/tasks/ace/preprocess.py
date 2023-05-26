@@ -192,6 +192,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         event_type = row['event_type']
         predicate_role = event_type.split('.')[0]
         arg_role = event_type.split('.')[1]
+        print(q_dict)
         if predicate_role in q_dict:
             if arg_role in q_dict[predicate_role]:
                 question = q_dict[predicate_role][arg_role][0]
