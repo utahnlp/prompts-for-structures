@@ -148,7 +148,7 @@ def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
             if ques_str.startswith('When does it'):
                 ques_str = re.sub('it', 'the '+predicate, ques_str)
             ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-            sentence = sentence + ' The event the question is asking about is: '+predicate_string
+            #sentence = sentence + ' The event the question is asking about is: '+predicate_string
             #ques_str = re.sub('\?', ' of the'+predicate+'?', ques_str)
             #ques_str = "given the predicate: " + row["text"] + " " + ques_str
             #ques_str = ques_str + ' ' + 'in ' + predicate_string
@@ -181,6 +181,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
             for prompting.
     """
     infile = csv.DictReader(open(filepath), delimiter='\t')
+    q_dict = read_questions()
     processed_data = []
     for row in infile:
         sent_id = row['arg_id']
@@ -188,6 +189,13 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         predicate = row['predicate_lemma']
         ques_str = row["query_question"]
         ques_str = ques_str + ' ' + 'in ' + predicate
+        event_type = row['event_type']
+        predicate_role = event_type.split('.')[0]
+        arg_role = event_type.split('.')[1]
+        if predicate_role in q_dict:
+            if arg_role in q_dict[predicate_role]:
+                question = q_dict[predicate_role][arg_role][0]
+        ques_str = question
         ans_str = row["argument_text"]
         ans_span = row["argument_span"]
         ans_span = ans_span.split(':')
