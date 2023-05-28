@@ -116,7 +116,7 @@ def eval_wikisrl(data, preds, meta=None):
 
     print(f"Completely Correct Predicates: {comp/total_pred}")
     print(f"Exact Accuracy for Argument Extraction: {corr_qs/total_qs}")
-    print(f"Completely Correct Predicates by Root Accuracy: {comp_dep/total_pred}")
-    print(f"Root Accuracy: {corr_qs_dep/total_qs}")
-
+    print(f"Completely Correct Predicates by Head Accuracy: {comp_dep/total_pred}")
+    print(f"Head Accuracy: {corr_qs_dep/total_qs}")
+    print()
  

@@ -71,6 +71,7 @@ def get_scores(generation, meta):
                 "sentence" and "score".
     meta: dict. Meta dictionary passed during inference
     """
+    score_y=0
     if meta["config"].score_type  == "prob":
         for p in generation:
             if p['sentence'] == "Yes":

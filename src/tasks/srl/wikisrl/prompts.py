@@ -44,7 +44,7 @@ def get_few_shot(few_shot_df, config):
     shot_text = ""
     for ix in prompt_order:
         if config.model[:2] == "t5":
-            shot_text += shot_prompts[ix] + " "
+            shot_text += shot_prompts[ix] + "\n"
         else:
             shot_text += shot_prompts[ix] + "\n"
 
