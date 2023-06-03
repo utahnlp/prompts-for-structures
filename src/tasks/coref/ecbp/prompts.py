@@ -24,7 +24,7 @@ def build_prompt(config, row):
             return f"""question: Does {row["entity1"]} refer to {row["entity2"]}? Yes or No? context: {sent} """
         elif config.prompt_style == "mcq":
             return f"""copa choice1: Yes choice2: premise: {sent} question: Does {row["entity1"]} refer to {row["entity2"]}? Yes or No?"""
-    elif config.model in ["macaw-3b"]:
+    elif config.model in ["macaw-3b","macaw-large"]:
         # The if condition below is to counter OOM errors for GENIA
         if config.dataset_name == "genia":
             sent = " ".join(sent.split()[:90]) 
