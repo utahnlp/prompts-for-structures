@@ -95,11 +95,12 @@ def restrict_vocab(config: Config) -> Tuple[ Union[List[str], None], Union[int, 
             restriction = ["Yes","No"]
             max_len = 3
             calib_prompt = "question: Yes or No? context: "
-        elif config.model in ["macaw-3b"]:
+        elif config.model in ["macaw-3b", "macaw-large"]:
             restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
             max_len = 10
             calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"
-
+        else:
+            raise "Model not in supported list of models. Please add it in utils.py or use a pre-existing one"
     return restriction, max_len, calib_prompt
 
 
@@ -189,7 +190,7 @@ class ValDict():
         
 
 def get_highlighted_context(row, model, full_context=False):
-    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b']:
+    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b','macaw-large']:
         
         s1 = row['sent1'].copy()
         ent1_ix = row['ent1_ix']
