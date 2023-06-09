@@ -347,7 +347,7 @@ def get_modified_ans(clusters, all_relations):
 
 
 def check_violations(yes_ids, no_ids, max_mentions):
-    rel_mat = np.full((max_mentions,max_mentions),"N/A", dtype=str)
+    rel_mat = np.full((max_mentions,max_mentions),"N", dtype=str)
     for rel in yes_ids:
         low = min(rel)
         high = max(rel)

@@ -107,6 +107,8 @@ def eval_ontonotes(data, preds, meta):
     gold_ans = []
     gold_relation_ids = []
     pred_relation_ids = []
+    pred_relation_ids_no = []
+
     all_relation_ids = []
     post_inf_ans = []
     rel_rows = []
@@ -197,8 +199,9 @@ def eval_ontonotes(data, preds, meta):
     if not meta['constrained']:
         f1_post = f1_score(gold_ans, post_inf_ans, average='macro')
         print(f"F1 Score (Post-inference): {f1_post}")
-    print(f"Gold Violations: {g_viol}")
-    print(f"Transitivity Violations (Prediciton): {p_viol}")
-    print(f"Total transitivity checks: {num_transitivity}")
+    #print(f"Gold Violations: {g_viol}")
+    if not meta['constrained']:
+        print(f"Transitivity Violations (Prediciton): {p_viol}")
+        print(f"Total transitivity checks: {num_transitivity}")
 
 

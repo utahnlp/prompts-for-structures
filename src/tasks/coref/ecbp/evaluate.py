@@ -100,6 +100,7 @@ def eval_ecbplus(data, preds, meta):
     gold_ans = []
     gold_relation_ids = []
     pred_relation_ids = []
+    pred_relation_ids_no = []
     all_relation_ids = []
     post_inf_ans = []
     #s_check_gold= []
@@ -195,9 +196,10 @@ def eval_ecbplus(data, preds, meta):
     print(f"F1 Score (Post-inference): {f1_post}")
     #f1_sc = f1_score(gold_ans, s_check_gold, average='macro')
     #print(f"Sanity F1 Score: {f1_sc}")
-    print(f"Gold Violations: {g_viol}")
-    print(f"Transitivity Violations (Predictions): {p_viol}")
-    print(f"Total transitivity checks: {num_transitivity}")
+    #print(f"Gold Violations: {g_viol}")
+    if not meta["constrained"]:
+        print(f"Transitivity Violations (Predictions): {p_viol}")
+        print(f"Total transitivity checks: {num_transitivity}")
 
     with open(meta['gold_dump_file'], "a") as f:
         f.write("#end document")
