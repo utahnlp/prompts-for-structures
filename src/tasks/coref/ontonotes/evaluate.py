@@ -127,10 +127,20 @@ def eval_ontonotes(data, preds, meta):
     g_viol = 0
     p_viol = 0
     num_transitivity = 0
+    
+    debug_flag = False
 
     for ix, row in data.iterrows():
+        #if meta["constrained"] and meta["pred_dump_file"][-6:] == "ns.txt" and not debug_flag:
+        #    if int(row["doc_id"]) != 1334806:
+        #        continue
+        #    else:
+        #        debug_flag = True
+        
         if doc == None:
             doc = row["doc_id"]
+
+
         # Change in doc_id implies a new structure
         if doc != row["doc_id"]:
             #if meta["constrained"]:
@@ -144,6 +154,17 @@ def eval_ontonotes(data, preds, meta):
 
             g_viol += gold_violations
             p_viol += pred_violations
+            #if meta["constrained"]:
+            #    try:
+            #        assert p_viol == 0
+            #    except AssertionError:
+            #        print(pred_relation_ids)
+            #        print(pred_relation_ids_no)
+            #        print(doc)
+            #        print(p_viol)
+            #        exit()
+        
+
             num_transitivity += total_checks
             if not meta['constrained']:
                 modified_ans = get_modified_ans(pred_clus, all_relation_ids)
@@ -164,7 +185,6 @@ def eval_ontonotes(data, preds, meta):
         max_nodes = max(max_nodes, row["mention_id1"]+1, row["mention_id2"]+1)
         rel_rows.append(row)
         # Curate edges to form the clusters ultimately
-
         
         if row['answer'] == 'Yes':
             gold_relation_ids.append([row['mention_id1'], row["mention_id2"]])

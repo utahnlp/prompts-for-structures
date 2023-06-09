@@ -372,17 +372,20 @@ def check_violations(yes_ids, no_ids, max_mentions):
                         at_least_two_edges = True
                     if rel_mat[i][k] == "N":
                         transitivity_viol += 1
+                        #print(i,j,k)
                 elif (rel_mat[i][k] == "Y") and (rel_mat[j][k] == "Y"):
                     if rel_mat[i][j] != "N/A":
                         at_least_two_edges = True
                     if rel_mat[i][j] == "N":
                         transitivity_viol += 1
+                        #print(i,j,k)
                 elif (rel_mat[i][j] == "Y") and (rel_mat[i][k] == "Y"):
                     if rel_mat[j][k] != "N/A":
                         at_least_two_edges = True
                     if rel_mat[j][k] == "N":
                         transitivity_viol += 1
-                
+                        #print(i,j,k)
+
                 if at_least_two_edges:
                     total_checks += 1
     
