@@ -72,10 +72,10 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
     processed_data = []
     outfile = csv.writer(open('type_questions_yesno.csv', 'w'))
     for row in infile:
-        sent_id = row['predicate']['event_id']
-        sentence = row['text']
-        predicate = row['predicate']['lemma']
-        predicate_role = row['predicate']['event_type']
+        sent_id = row['event_id']
+        sentence = row['sentence']
+        predicate = row['predicate']
+        predicate_role = row['event_type']
         #TODO: for now I am only predicting for existing arguments!
         predicted_arguments = row["predicted_arguments"].split('%%%')
         arg_role = row["role_type"]
