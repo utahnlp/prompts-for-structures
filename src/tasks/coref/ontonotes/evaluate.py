@@ -5,7 +5,8 @@ from sklearn.metrics import f1_score
 from typing import List
 
 from graph import get_all_cliques
-from utils import right_to_left_search, Config, get_modified_ans
+from utils import right_to_left_search, Config, get_modified_ans, check_violations
+
 
 
 def get_cluster(clusters, ent_id):
@@ -135,11 +136,13 @@ def eval_ontonotes(data, preds, meta):
             #    pred_clus, pred_violations = get_all_cliques(pred_relation_ids, max_nodes)
         
             gold_clus, gold_violations  = right_to_left_search(gold_relation_ids, max_nodes)
-            pred_clus, pred_violations  = right_to_left_search(pred_relation_ids, max_nodes)
+            pred_clus, _  = right_to_left_search(pred_relation_ids, max_nodes)
+            
+            pred_violations, total_checks = check_violations(pred_relation_ids, pred_relation_ids_no, max_nodes)
 
             g_viol += gold_violations
             p_viol += pred_violations
-            num_transitivity += (max_nodes)*(max_nodes-1)*(max_nodes-2) 
+            num_transitivity += total_checks
             if not meta['constrained']:
                 modified_ans = get_modified_ans(pred_clus, all_relation_ids)
                 post_inf_ans.extend(modified_ans)
@@ -149,6 +152,7 @@ def eval_ontonotes(data, preds, meta):
             # Refresh List
             gold_relation_ids = []
             pred_relation_ids = []
+            pred_relation_ids_no = []
             all_relation_ids = []
             doc = row["doc_id"]
             max_nodes = 0
@@ -164,16 +168,21 @@ def eval_ontonotes(data, preds, meta):
             gold_relation_ids.append([row['mention_id1'], row["mention_id2"]])
         if preds[ix] == 'Yes':
             pred_relation_ids.append([row['mention_id1'], row["mention_id2"]])
+        elif preds[ix] == 'No':
+            pred_relation_ids_no.append([row['mention_id1'], row["mention_id2"]])
+
         all_relation_ids.append([row['mention_id1'], row["mention_id2"]])
 
 
     # For the last document
     gold_clus, gold_violations = right_to_left_search(gold_relation_ids, max_nodes)
-    pred_clus, pred_violations = right_to_left_search(pred_relation_ids, max_nodes)
+    pred_clus, _ = right_to_left_search(pred_relation_ids, max_nodes)
+
+    pred_violations, total_checks = check_violations(pred_relation_ids, pred_relation_ids_no, max_nodes)
 
     g_viol += gold_violations
     p_viol += pred_violations
-    num_transitivity += (max_nodes)*(max_nodes-1)*(max_nodes-2) 
+    num_transitivity += total_checks
 
     if not meta['constrained']:
         modified_ans = get_modified_ans(pred_clus, all_relation_ids)
@@ -191,10 +200,5 @@ def eval_ontonotes(data, preds, meta):
     print(f"Gold Violations: {g_viol}")
     print(f"Transitivity Violations (Prediciton): {p_viol}")
     print(f"Total transitivity checks: {num_transitivity}")
-
-    #with open(meta['gold_dump_file'], "a") as f:
-    #    f.write("#end document")
-    #with open(meta['pred_dump_file'], "a") as f:
-    #    f.write("#end document")
 
 

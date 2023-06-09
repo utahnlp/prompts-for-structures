@@ -342,6 +342,54 @@ def get_modified_ans(clusters, all_relations):
     return modified_ans.copy() 
 
 
+
+
+
+
+def check_violations(yes_ids, no_ids, max_mentions):
+    rel_mat = np.full((max_mentions,max_mentions),"N/A", dtype=str)
+    for rel in yes_ids:
+        low = min(rel)
+        high = max(rel)
+        rel_mat[low][high] = "Y"
+   
+    for rel in no_ids:
+        low = min(rel)
+        high = max(rel)
+        rel_mat[low][high] = "N"
+    
+    
+    transitivity_viol = 0
+    total_checks = 0
+
+    # Computing transivity violations
+    for i in range(1, max_mentions):
+        for j in range(i+1, max_mentions):
+            for k in range(j+1, max_mentions):
+                at_least_two_edges = False 
+                if (rel_mat[i][j] == "Y") and (rel_mat[j][k] == "Y"):
+                    if rel_mat[i][k] != "N/A":
+                        at_least_two_edges = True
+                    if rel_mat[i][k] == "N":
+                        transitivity_viol += 1
+                elif (rel_mat[i][k] == "Y") and (rel_mat[j][k] == "Y"):
+                    if rel_mat[i][j] != "N/A":
+                        at_least_two_edges = True
+                    if rel_mat[i][j] == "N":
+                        transitivity_viol += 1
+                elif (rel_mat[i][j] == "Y") and (rel_mat[i][k] == "Y"):
+                    if rel_mat[j][k] != "N/A":
+                        at_least_two_edges = True
+                    if rel_mat[j][k] == "N":
+                        transitivity_viol += 1
+                
+                if at_least_two_edges:
+                    total_checks += 1
+    
+    return transitivity_viol, total_checks
+
+
+
 if __name__ == "__main__":
     conf = Config()
     print(conf.task_name)
