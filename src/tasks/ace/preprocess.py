@@ -80,6 +80,7 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
         predicted_arguments = row["predicted_arguments"].split('%%%')
         arg_role = row["role_type"]
         for arg in predicted_arguments:
+            ans_str = arg
             if predicate_role in q_dict:
                 if arg_role in q_dict[predicate_role]:
                     types = q_dict[predicate_role][arg_role]
@@ -89,7 +90,6 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
             else:
                 print(predicate_role)
                 print(arg_role)
-            ans_str = arg["text"]
             for type in types:
                 if type in type_q_dict:
                     ques_str = type_q_dict[type]
