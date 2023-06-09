@@ -72,6 +72,7 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
     processed_data = []
     outfile = csv.writer(open('type_questions_yesno.csv', 'w'))
     for row in infile:
+        print(row)
         sent_id = row['event_id']
         sentence = row['sentence']
         predicate = row['predicate']
