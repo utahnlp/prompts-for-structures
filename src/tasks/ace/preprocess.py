@@ -68,11 +68,10 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
     type_q_dict = read_type_questions_yesno()
     # predicate : argument : types
     q_dict = read_types()
-    infile = csv.DictReader(open(filepath), delimiter='\t')
+    infile = csv.DictReader(open(filepath), delimiter=',')
     processed_data = []
     outfile = csv.writer(open('type_questions_yesno.csv', 'w'))
     for row in infile:
-        print(row)
         sent_id = row['event_id']
         sentence = row['sentence']
         predicate = row['predicate']
