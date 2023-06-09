@@ -13,8 +13,8 @@ from tasks.ace.inference import inference_ace
 INFERENCE_DICT = {
             "srl" : inference_srl,
             "coref": inference_coref,
-            "ace" : inference_ace
-
+            "ace" : inference_ace,
+            "ace_type" : inference_ace
         }
 
 

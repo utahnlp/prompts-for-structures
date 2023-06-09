@@ -18,6 +18,16 @@ def read_type_questions():
 
     return type_q_map
 
+def read_type_questions_yesno():
+    #type : question
+    type_q_map = defaultdict(lambda : '')
+    infile = csv.DictReader(open('../data/questions/questions.tsv'), delimiter='\t')
+
+    for row in infile:
+        type_q_map[row['type']]=row['question2']
+
+    return type_q_map
+
 def read_types():
     # predicate : argument : types
     type_dict = defaultdict(lambda: defaultdict(lambda: []))
@@ -44,6 +54,54 @@ def read_questions():
 
     return q_dict
 
+def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
+    """ Preprocessing function for ACE with questions.
+    Input
+    ----------------------
+    filepath: str or pathlib.Path. Input data file path
+
+    Output
+    ----------------------
+    data_df: pd.DataFrame. Dataframe where each row represents a row
+            for prompting.
+    """
+    type_q_dict = read_type_questions_yesno()
+    # predicate : argument : types
+    q_dict = read_types()
+    infile = csv.DictReader(open(filepath), delimiter='\t')
+    processed_data = []
+    outfile = csv.writer(open('type_questions_yesno.csv', 'w'))
+    for row in infile:
+        sent_id = row['predicate']['event_id']
+        sentence = row['text']
+        predicate = row['predicate']['lemma']
+        predicate_role = row['predicate']['event_type']
+        #TODO: for now I am only predicting for existing arguments!
+        predicted_arguments = row["predicted_arguments"].split('%%%')
+        arg_role = row["role_type"]
+        for arg in predicted_arguments:
+            if predicate_role in q_dict:
+                if arg_role in q_dict[predicate_role]:
+                    types = q_dict[predicate_role][arg_role]
+                else:
+                    print(predicate_role)
+                    print(arg_role)
+            else:
+                print(predicate_role)
+                print(arg_role)
+            ans_str = arg["text"]
+            for type in types:
+                if type in type_q_dict:
+                    ques_str = type_q_dict[type]
+                    print(ques_str)
+                    processed_data.append(
+                        [sent_id, sentence, predicate, ques_str, ans_str])
+                    outfile.writerow([ques_str, sent_id, predicate, type, arg_role])
+
+    columns = ["sent_id", "sentence", "predicate", "question", "answer"]
+    data_df = pd.DataFrame(processed_data, columns=columns)
+
+    return data_df
 
 
 def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
@@ -192,9 +250,7 @@ def preprocess_ace(filepath: Union[str, Path]) -> pd.DataFrame:
         predicate_role = row['event_type']
         predicate_role =  '_'.join(predicate_role.split('.'))
         arg_role = row['role_type']
-        print(q_dict)
         if predicate_role in q_dict:
-            print('ok')
             if arg_role in q_dict[predicate_role]:
                 question = q_dict[predicate_role][arg_role][0]
         ques_str = question

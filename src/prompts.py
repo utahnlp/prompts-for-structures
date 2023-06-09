@@ -6,7 +6,7 @@ from utils import get_highlighted_context, Config
 from tasks.srl.wikisrl.prompts import prompt_srl_wiki
 from tasks.srl.qasrl2.prompts import prompt_qasrl2
 from tasks.coref.ecbp.prompts import prompt_coref_ecbplus
-from tasks.ace.prompts import prompt_ace
+from tasks.ace.prompts import prompt_ace, prompt_ace_types_yes_no
 
 PROMPT_DICT = {
 
@@ -20,6 +20,9 @@ PROMPT_DICT = {
             "ace": {
                 "ace": prompt_ace
             },
+            "ace_types": {
+                "ace_types" : prompt_ace_types_yes_no
+            }
         }
 
 

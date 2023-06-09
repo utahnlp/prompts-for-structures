@@ -23,8 +23,10 @@ EVALUATION_DICT = {
                 },
             "ace": {
                     "ace": eval_ace,
-            }
-        
+            },
+    "ace_types": {
+        "ace_types": eval_ace,
+    }
         }
 
 
