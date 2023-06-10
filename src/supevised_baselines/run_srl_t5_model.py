@@ -139,7 +139,7 @@ class SRLExtractor(torch.nn.Module):
             lab_ids = self.tokenizer(labs,return_tensors="pt", padding=True).input_ids
             
             with torch.no_grad():
-                outputs = self.model.generate(input_ids.to(device), num_return_sequences=1, num_beams=20, output_scores=True, return_dict_in_generate=True)
+                outputs = self.model.generate(input_ids.to(device), num_return_sequences=1, num_beams=20)
                 gold_labs.extend(labs)
             
                 for ix in range(outputs.shape[0]):

@@ -104,11 +104,11 @@ class CorefClassifier(torch.nn.Module):
             
                 loss.backward()
                 optimizer.step()
-                 
+                
             print(f"Train Loss: {np.mean(tr_loss)}")
 
             metric = self.evaluate(dev_loader)
-            
+            ) 
             if metric > best_metric:
                 no_improv = 0
                 best_metric = metric
@@ -139,7 +139,7 @@ class CorefClassifier(torch.nn.Module):
             lab_ids = self.tokenizer(labs,return_tensors="pt", padding=True).input_ids
             
             with torch.no_grad():
-                outputs = self.model.generate(input_ids.to(device), num_return_sequences=1, num_beams=20, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len, output_scores=True, return_dict_in_generate=True)
+                outputs = self.model.generate(input_ids.to(device), num_return_sequences=1, num_beams=20, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
 
                 gold_labs.extend(labs)
             
