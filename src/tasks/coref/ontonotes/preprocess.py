@@ -223,8 +223,12 @@ def preprocess_ontonotes_coref(filepath):
     onto_file = open(onto_fname, "a+")
     onto_file.write("#begin document\n")
 
-    for f in glob.iglob(str(filepath)+"/**/**.gold_conll", recursive=True):
+    filelist =  list(glob.iglob(str(filepath)+"/**/**.gold_conll", recursive=True))
+    filelist.sort()
+
+    for f in filelist:
         docs = dataset_document_iterator(f)
+        
         for doc_ix, doc in enumerate(docs):
             word_id = 1
             for sent_ix, sent in enumerate(doc):
