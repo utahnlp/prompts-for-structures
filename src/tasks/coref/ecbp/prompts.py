@@ -29,7 +29,9 @@ def build_prompt(config, row):
         #if config.dataset_name == "genia":
         #    sent = " ".join(sent.split()[:90]) 
         return f"""$answer$ ; $mcoptions$=(A) Yes (B) No  ; {sent} Does {row["entity1"]} refer to {row["entity2"]}?"""
-            
+    elif config.model == "flan-t5-xl":
+        return f"""{sent} \n In the above passage, does {row["entity1"]} refer to {row["entity2"]}? Yes or No?"""
+        
 
 
 def get_few_shot(few_shot_df, config):

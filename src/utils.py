@@ -91,7 +91,7 @@ def restrict_vocab(config: Config) -> Tuple[ Union[List[str], None], Union[int, 
     calib_prompt = None # Dummy prompt for calibration
 
     if config.task_name in ["coref"]:
-        if config.model in ["t5", "t5-11b", "t5-3b"]:
+        if config.model in ["t5", "t5-11b", "t5-3b","flan-t5-xl"]:
             restriction = ["Yes","No"]
             max_len = 3
             calib_prompt = "question: Yes or No? context: "
@@ -190,7 +190,7 @@ class ValDict():
         
 
 def get_highlighted_context(row, model, full_context=False):
-    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b','macaw-large']:
+    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b','macaw-large','flan-t5-xl']:
         
         s1 = row['sent1'].copy()
         ent1_ix = row['ent1_ix']
