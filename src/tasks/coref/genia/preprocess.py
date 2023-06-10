@@ -189,6 +189,8 @@ def preprocess_genia_coref(filepath):
     df - pd.DataFrame. Dataframe containing the processed data.
     """
     files = list(Path(filepath).glob("*.xml"))
+    files.sort()
+    
     doc = []
     # Iterating over all the files in the set
     for f in tqdm(files):
