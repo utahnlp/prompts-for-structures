@@ -108,7 +108,7 @@ class CorefClassifier(torch.nn.Module):
             print(f"Train Loss: {np.mean(tr_loss)}")
 
             metric = self.evaluate(dev_loader)
-            ) 
+             
             if metric > best_metric:
                 no_improv = 0
                 best_metric = metric
