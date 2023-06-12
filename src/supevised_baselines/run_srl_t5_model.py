@@ -15,10 +15,10 @@ from tasks.srl.wikisrl.evaluate import eval_wikisrl
 
 
 GPU_ID='1'
-SEED = 42
+SEED = 1984
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 
 
@@ -80,14 +80,14 @@ class SRLExtractor(torch.nn.Module):
         return prompts, labels
 
 
-    def train(self, model_dir, lr = 0.00001, max_epochs=20):
+    def train(self, model_dir, lr = 0.00001, max_epochs=20, e_stop = 5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = SRLDataset(train_prompts, train_labs)
         train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=8)
 
         dev_prompts, dev_labs = self.process_eval_prompts(self.dev_df)
         dev_dataset = SRLDataset(dev_prompts, dev_labs)
-        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=16)
+        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=8)
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
