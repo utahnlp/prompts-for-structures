@@ -43,7 +43,7 @@ class SRLExtractor(torch.nn.Module):
         self.train_df = preprocess_dict[dataset_name](train_file)
         self.dev_df = preprocess_dict[dataset_name](dev_file)
         self.test_df = preprocess_dict[dataset_name](test_file)
-        sefl.dataset_name = dataset_name
+        self.dataset_name = dataset_name
         
         self.tokenizer = T5Tokenizer.from_pretrained("t5-3b") 
         self.model = T5ForConditionalGeneration.from_pretrained("t5-3b").to(device)
