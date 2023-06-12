@@ -147,7 +147,7 @@ class SRLExtractor(torch.nn.Module):
                     output_ans = self.tokenizer.decode(outputs[ix], skip_special_tokens=True)
                     pred_ans.append(output_ans.strip())
         corr = 0                    
-        for ix in range(pred_ans):
+        for ix in range(len(pred_ans)):
             if pred_ans[ix] in gold_labs[ix].split(" ### "):
                 corr += 1
 
