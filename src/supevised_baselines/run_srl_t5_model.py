@@ -39,7 +39,7 @@ class SRLDataset(data.Dataset):
 class SRLExtractor(torch.nn.Module):
     def __init__(self, train_file, dev_file, test_file, dataset_name):
         super(SRLExtractor,self).__init__()
-        preprocess_dict = {"wiki": preprocess_wikisrl, "ontonotes": preprocess_qasrl2}
+        preprocess_dict = {"wiki": preprocess_wikisrl, "qasrl2": preprocess_qasrl2}
         self.train_df = preprocess_dict[dataset_name](train_file)
         self.dev_df = preprocess_dict[dataset_name](dev_file)
         self.test_df = preprocess_dict[dataset_name](test_file)
@@ -55,7 +55,7 @@ class SRLExtractor(torch.nn.Module):
         for ix, row in df.iterrows():
             if self.dataset_name == "wiki":
                 query = f"""question: {row['question']} context: {row['sentence']} <extra_id_0>"""
-            else self.dataset_name == "qasrl2":
+            elif self.dataset_name == "qasrl2":
                 query = f"""question: {row['question']} context: {" ".join(row['sentence'])} <extra_id_0>"""
  
             prompts.append(query)
