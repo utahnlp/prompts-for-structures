@@ -18,8 +18,8 @@ GPU_ID='1'
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-#device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-device = 'cpu'
+device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+#device = 'cpu'
 
 
 
@@ -103,7 +103,7 @@ class SRLExtractor(torch.nn.Module):
             for pro, labs in tqdm(train_loader):
                 input_ids = self.tokenizer(pro, return_tensors="pt", padding=True).input_ids
                 lab_ids = self.tokenizer(labs,return_tensors="pt", padding=True).input_ids
-                outputs = self.model(input_ids = input_ids, labels=lab_ids)
+                outputs = self.model(input_ids = input_ids.to(device), labels=lab_ids.to(device))
                 
                 loss = outputs.loss
                 tr_loss.append(loss.item())
@@ -190,12 +190,14 @@ class SRLExtractor(torch.nn.Module):
 if __name__ == "__main__":
     dataset_name = "wiki"
     mode = "train"
-    DATA_DIR =  "./../../data/" 
+    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/"
+
+
     train_file = DATA_DIR + "wiki1.train.qa"
     dev_file   = DATA_DIR + "wiki1.dev.qa"
     test_file = DATA_DIR + "wiki1.test.qa"
 
-    model_dir = f"./../../models/sup_baseline/srl/{dataset_name}/{SEED}/"
+    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/srl/{dataset_name}/{SEED}/"
 
     srl_model = SRLExtractor(train_file, dev_file, test_file, dataset_name)
     if mode == "train":
