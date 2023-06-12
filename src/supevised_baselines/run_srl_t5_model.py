@@ -15,11 +15,11 @@ from tasks.srl.wikisrl.evaluate import eval_wikisrl
 
 
 GPU_ID='1'
-SEED = 42
+SEED = 1984
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-#device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-device = 'cpu'
+device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
+#device = 'cpu'
 
 
 
@@ -39,11 +39,11 @@ class SRLDataset(data.Dataset):
 class SRLExtractor(torch.nn.Module):
     def __init__(self, train_file, dev_file, test_file, dataset_name):
         super(SRLExtractor,self).__init__()
-        preprocess_dict = {"wiki": preprocess_wikisrl, "ontonotes": preprocess_qasrl2}
+        preprocess_dict = {"wiki": preprocess_wikisrl, "qasrl2": preprocess_qasrl2}
         self.train_df = preprocess_dict[dataset_name](train_file)
         self.dev_df = preprocess_dict[dataset_name](dev_file)
         self.test_df = preprocess_dict[dataset_name](test_file)
-        sefl.dataset_name = dataset_name
+        self.dataset_name = dataset_name
         
         self.tokenizer = T5Tokenizer.from_pretrained("t5-3b") 
         self.model = T5ForConditionalGeneration.from_pretrained("t5-3b").to(device)
@@ -55,7 +55,7 @@ class SRLExtractor(torch.nn.Module):
         for ix, row in df.iterrows():
             if self.dataset_name == "wiki":
                 query = f"""question: {row['question']} context: {row['sentence']} <extra_id_0>"""
-            else self.dataset_name == "qasrl2":
+            elif self.dataset_name == "qasrl2":
                 query = f"""question: {row['question']} context: {" ".join(row['sentence'])} <extra_id_0>"""
  
             prompts.append(query)
@@ -71,7 +71,7 @@ class SRLExtractor(torch.nn.Module):
         for ix, row in df.iterrows():
             if self.dataset_name == "wiki":
                 query = f"""question: {row['question']} context: {row['sentence']}"""
-            else self.dataset_name == "qasrl2":
+            elif self.dataset_name == "qasrl2":
                 query = f"""question: {row['question']} context: {" ".join(row['sentence'])}"""
  
             prompts.append(query)
@@ -80,14 +80,14 @@ class SRLExtractor(torch.nn.Module):
         return prompts, labels
 
 
-    def train(self, model_dir, lr = 0.00001, max_epochs=20):
+    def train(self, model_dir, lr = 0.00001, max_epochs=20, e_stop = 5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = SRLDataset(train_prompts, train_labs)
         train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=8)
 
         dev_prompts, dev_labs = self.process_eval_prompts(self.dev_df)
         dev_dataset = SRLDataset(dev_prompts, dev_labs)
-        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=4)
+        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=8)
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
@@ -103,7 +103,7 @@ class SRLExtractor(torch.nn.Module):
             for pro, labs in tqdm(train_loader):
                 input_ids = self.tokenizer(pro, return_tensors="pt", padding=True).input_ids
                 lab_ids = self.tokenizer(labs,return_tensors="pt", padding=True).input_ids
-                outputs = self.model(input_ids = input_ids, labels=lab_ids)
+                outputs = self.model(input_ids = input_ids.to(device), labels=lab_ids.to(device))
                 
                 loss = outputs.loss
                 tr_loss.append(loss.item())
@@ -114,6 +114,7 @@ class SRLExtractor(torch.nn.Module):
             print(f"Train Loss: {np.mean(tr_loss)}")
 
             metric = self.evaluate(dev_loader)
+            print(f"Dev exact accuracy: {metric}")
             
             if metric > best_metric:
                 no_improv = 0
@@ -146,8 +147,8 @@ class SRLExtractor(torch.nn.Module):
                     output_ans = self.tokenizer.decode(outputs[ix], skip_special_tokens=True)
                     pred_ans.append(output_ans.strip())
         corr = 0                    
-        for ix in range(pred_ans):
-            if pred_ans[ix] in gold_ans[ix].split(" ### "):
+        for ix in range(len(pred_ans)):
+            if pred_ans[ix] in gold_labs[ix].split(" ### "):
                 corr += 1
 
         return corr/ len(pred_ans)
@@ -190,12 +191,14 @@ class SRLExtractor(torch.nn.Module):
 if __name__ == "__main__":
     dataset_name = "wiki"
     mode = "train"
-    DATA_DIR =  "./../../data/" 
+    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/"
+
+
     train_file = DATA_DIR + "wiki1.train.qa"
     dev_file   = DATA_DIR + "wiki1.dev.qa"
     test_file = DATA_DIR + "wiki1.test.qa"
 
-    model_dir = f"./../../models/sup_baseline/srl/{dataset_name}/{SEED}/"
+    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/srl/{dataset_name}/{SEED}/"
 
     srl_model = SRLExtractor(train_file, dev_file, test_file, dataset_name)
     if mode == "train":
