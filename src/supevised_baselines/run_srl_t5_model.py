@@ -71,7 +71,7 @@ class SRLExtractor(torch.nn.Module):
         for ix, row in df.iterrows():
             if self.dataset_name == "wiki":
                 query = f"""question: {row['question']} context: {row['sentence']}"""
-            else self.dataset_name == "qasrl2":
+            elif self.dataset_name == "qasrl2":
                 query = f"""question: {row['question']} context: {" ".join(row['sentence'])}"""
  
             prompts.append(query)
