@@ -87,7 +87,7 @@ class SRLExtractor(torch.nn.Module):
 
         dev_prompts, dev_labs = self.process_eval_prompts(self.dev_df)
         dev_dataset = SRLDataset(dev_prompts, dev_labs)
-        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=4)
+        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=16)
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
@@ -114,6 +114,7 @@ class SRLExtractor(torch.nn.Module):
             print(f"Train Loss: {np.mean(tr_loss)}")
 
             metric = self.evaluate(dev_loader)
+            print(f"Dev exact accuracy: {metric}")
             
             if metric > best_metric:
                 no_improv = 0
@@ -147,7 +148,7 @@ class SRLExtractor(torch.nn.Module):
                     pred_ans.append(output_ans.strip())
         corr = 0                    
         for ix in range(pred_ans):
-            if pred_ans[ix] in gold_ans[ix].split(" ### "):
+            if pred_ans[ix] in gold_labs[ix].split(" ### "):
                 corr += 1
 
         return corr/ len(pred_ans)
