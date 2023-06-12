@@ -13,7 +13,7 @@ def build_prompt(config, row):
     elif (config.model == "unified-qa") or (config.model[:12]=="unifiedqa-v2"):
         return f"""{row["question"].lower()} \n {row["sentence"].lower()} """
     elif config.model == "flan-t5-xl":
-        return f"""{" ".join(row["sentence"])} \n In the above sentence, {row["question"]}"""
+        return f"""{row["sentence"]} \n In the above sentence, {row["question"]}"""
     else:
         print("""************* Model name not supported for the dataset-task combination. Please recheck model name. """)
 
