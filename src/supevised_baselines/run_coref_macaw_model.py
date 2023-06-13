@@ -20,8 +20,8 @@ GPU_ID='1'
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-#device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-device = 'cpu'
+device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+#device = 'cpu'
 
 
 
@@ -97,7 +97,7 @@ class CorefClassifier(torch.nn.Module):
             for pro, labs in tqdm(train_loader):
                 input_ids = self.tokenizer(pro, return_tensors="pt", padding=True).input_ids
                 lab_ids = self.tokenizer(labs,return_tensors="pt", padding=True).input_ids
-                outputs = self.model(input_ids = input_ids, labels=lab_ids)
+                outputs = self.model(input_ids = input_ids.to(device), labels=lab_ids.to(device))
                 
                 loss = outputs.loss
                 tr_loss.append(loss.item())
