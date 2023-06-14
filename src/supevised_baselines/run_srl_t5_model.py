@@ -15,10 +15,10 @@ from tasks.srl.wikisrl.evaluate import eval_wikisrl
 
 
 GPU_ID='1'
-SEED = 1984
+SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 
 
@@ -110,19 +110,20 @@ class SRLExtractor(torch.nn.Module):
             
                 loss.backward()
                 optimizer.step()
-                 
+                break
+
             print(f"Train Loss: {np.mean(tr_loss)}")
 
             metric = self.evaluate(dev_loader)
             print(f"Dev exact accuracy: {metric}")
-            
+        
             if metric > best_metric:
                 no_improv = 0
                 best_metric = metric
                 torch.save({
                     "model_state_dict" : self.model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict()
-                    }, Path(model_dir, ep+1))
+                    }, Path(model_dir, str(ep+1)))
             else:
                 no_improv += 1
                 if no_improv == e_stop:
@@ -146,6 +147,7 @@ class SRLExtractor(torch.nn.Module):
                 for ix in range(outputs.shape[0]):
                     output_ans = self.tokenizer.decode(outputs[ix], skip_special_tokens=True)
                     pred_ans.append(output_ans.strip())
+            
         corr = 0                    
         for ix in range(len(pred_ans)):
             if pred_ans[ix] in gold_labs[ix].split(" ### "):
@@ -191,14 +193,14 @@ class SRLExtractor(torch.nn.Module):
 if __name__ == "__main__":
     dataset_name = "wiki"
     mode = "train"
-    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/"
+    DATA_DIR =  "./../../data/"
 
 
     train_file = DATA_DIR + "wiki1.train.qa"
     dev_file   = DATA_DIR + "wiki1.dev.qa"
     test_file = DATA_DIR + "wiki1.test.qa"
 
-    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/srl/{dataset_name}/{SEED}/"
+    model_dir = f"./../../models/sup_baseline/srl/{dataset_name}/{SEED}/"
 
     srl_model = SRLExtractor(train_file, dev_file, test_file, dataset_name)
     if mode == "train":

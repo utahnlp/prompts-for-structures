@@ -116,7 +116,7 @@ class CorefClassifier(torch.nn.Module):
                 torch.save({
                     "model_state_dict" : self.model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict()
-                    }, Path(model_dir, ep+1))
+                    }, Path(model_dir, str(ep+1)))
             else:
                 no_improv += 1
                 if no_improv == e_stop:
