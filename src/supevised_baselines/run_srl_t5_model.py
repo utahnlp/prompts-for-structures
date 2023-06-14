@@ -59,7 +59,7 @@ class SRLExtractor(torch.nn.Module):
                 query = f"""question: {row['question']} context: {" ".join(row['sentence'])} <extra_id_0>"""
  
             prompts.append(query)
-            ans = row["answer"].split(" ### ")
+            ans = row["answer"].split(" ### ")[0]
             labels.append(f"""<extra_id_0> {ans}""")
         
         return prompts, labels
@@ -87,7 +87,7 @@ class SRLExtractor(torch.nn.Module):
 
         dev_prompts, dev_labs = self.process_eval_prompts(self.dev_df)
         dev_dataset = SRLDataset(dev_prompts, dev_labs)
-        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=8)
+        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=6)
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
@@ -110,7 +110,6 @@ class SRLExtractor(torch.nn.Module):
             
                 loss.backward()
                 optimizer.step()
-                break
 
             print(f"Train Loss: {np.mean(tr_loss)}")
 
@@ -147,7 +146,7 @@ class SRLExtractor(torch.nn.Module):
                 for ix in range(outputs.shape[0]):
                     output_ans = self.tokenizer.decode(outputs[ix], skip_special_tokens=True)
                     pred_ans.append(output_ans.strip())
-            
+                 
         corr = 0                    
         for ix in range(len(pred_ans)):
             if pred_ans[ix] in gold_labs[ix].split(" ### "):
