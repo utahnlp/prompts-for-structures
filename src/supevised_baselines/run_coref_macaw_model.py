@@ -105,10 +105,11 @@ class CorefClassifier(torch.nn.Module):
                 loss.backward()
                 optimizer.step()
                 
+                
             print(f"Train Loss: {np.mean(tr_loss)}")
 
             metric = self.evaluate(dev_loader)
-             
+            print(f"Dev F1: {metric}")     
             if metric > best_metric:
                 no_improv = 0
                 best_metric = metric
@@ -127,6 +128,7 @@ class CorefClassifier(torch.nn.Module):
     def evaluate(self, eval_loader):
         restriction = ["$answer$ = Yes", "$answer$ = No"]
         max_len = 10
+        beam_size = 20
 
         def restrict_decode_vocab(batch_idx, prefix_beam):
             """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169"""
@@ -139,17 +141,22 @@ class CorefClassifier(torch.nn.Module):
             lab_ids = self.tokenizer(labs,return_tensors="pt", padding=True).input_ids
             
             with torch.no_grad():
-                outputs = self.model.generate(input_ids.to(device), num_return_sequences=1, num_beams=20, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
+                outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len, return_dict_in_generate=True)
 
                 gold_labs.extend(labs)
             
-                for ix in range(outputs.shape[0]):
-                    output_ans = self.tokenizer.decode(outputs[ix], skip_special_tokens=True)
-                    if output_ans.strip() == "$answer$ = Yes":
-                        pred_ans.append("Yes")
-                    elif output_ans.strip() == "$answer$ = No":
-                        pred_ans.append("No")
-                                
+                for ix in range(input_ids.shape[0]):
+                    cand_outs = torch.reshape(outputs.sequences, (input_ids.shape[0],beam_size, max_len))
+                    for seq_ix in range(beam_size): #Iterate over the beam size
+                        output_ans = self.tokenizer.decode(cand_outs[ix][seq_ix], skip_special_tokens=True)
+                        if output_ans.strip() == "$answer$ = Yes":
+                            pred_ans.append("Yes")
+                            break
+
+                        elif output_ans.strip() == "$answer$ = No":
+                            pred_ans.append("No")
+                            break
+
         f_score = f1_score(gold_labs , pred_ans, average='macro')  
          
         return f_score
