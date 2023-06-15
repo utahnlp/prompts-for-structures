@@ -46,8 +46,8 @@ class CorefClassifier(torch.nn.Module):
         self.dev_df = preprocess_dict[dataset_name](dev_file)
         self.test_df = preprocess_dict[dataset_name](test_file)
 
-        self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-large", add_prefix_space=True) 
-        self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-large").to(device)
+        self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-3b", add_prefix_space=True) 
+        self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-3b").to(device)
     
 
     def process_prompts(self, df):
