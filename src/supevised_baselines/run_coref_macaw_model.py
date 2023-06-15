@@ -46,8 +46,8 @@ class CorefClassifier(torch.nn.Module):
         self.dev_df = preprocess_dict[dataset_name](dev_file)
         self.test_df = preprocess_dict[dataset_name](test_file)
 
-        self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-3b", add_prefix_space=True) 
-        self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-3b").to(device)
+        self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-large", add_prefix_space=True) 
+        self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-large").to(device)
     
 
     def process_prompts(self, df):
@@ -56,7 +56,7 @@ class CorefClassifier(torch.nn.Module):
         for ix, row in df.iterrows():
             query = f"""$answer$ ; $mcoptions$=(A) Yes (B) No  ; {row["sentence"]} Does {row["entity1"]} refer to {row["entity2"]}? <extra_id_0>"""
             prompts.append(query)
-            labels.append(f"""<extra_id_0> $answer$ = {row["answer"]}""")
+            labels.append(f"""$answer$ = {row["answer"]}""")
         
         return prompts, labels
 
@@ -74,7 +74,7 @@ class CorefClassifier(torch.nn.Module):
 
 
 
-    def train(self, model_dir, lr = 0.00001, max_epochs=20):
+    def train(self, model_dir, lr = 0.00001, max_epochs=20, e_stop=5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = CorefDataset(train_prompts, train_labs)
         train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=8)
@@ -144,9 +144,9 @@ class CorefClassifier(torch.nn.Module):
                 outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len, return_dict_in_generate=True)
 
                 gold_labs.extend(labs)
-            
+
                 for ix in range(input_ids.shape[0]):
-                    cand_outs = torch.reshape(outputs.sequences, (input_ids.shape[0],beam_size, max_len))
+                    cand_outs = torch.reshape(outputs.sequences, (input_ids.shape[0],beam_size, int((outputs.sequences.shape[0])*(outputs.sequences.shape[1])/(input_ids.shape[0]*beam_size))))
                     for seq_ix in range(beam_size): #Iterate over the beam size
                         output_ans = self.tokenizer.decode(cand_outs[ix][seq_ix], skip_special_tokens=True)
                         if output_ans.strip() == "$answer$ = Yes":
@@ -186,7 +186,7 @@ class CorefClassifier(torch.nn.Module):
             with torch.no_grad():
                 outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
                 
-                candidate_sequences = torch.reshape(outputs.sequences, (input_ids.shape[0], beam_size, max_len))
+                candidate_sequences = torch.reshape(outputs.sequences, (input_ids.shape[0], beam_size, int((outputs.sequences.shape[0])*(outputs.sequences.shape[1])/(input_ids.shape[0]*beam_size))))
                 candidate_sequences_scores = torch.reshape(outputs.sequences_scores, (input_ids.shape[0], beam_size))
                 
                 for in_batch_ix in range(input_ids.shape[0]):
