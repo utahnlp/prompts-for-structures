@@ -95,7 +95,7 @@ def restrict_vocab(config: Config) -> Tuple[ Union[List[str], None], Union[int, 
             restriction = ["Yes","No"]
             max_len = 3
             calib_prompt = "question: Yes or No? context: "
-        elif config.model in ["macaw-3b", "macaw-large"]:
+        elif config.model in ["macaw-3b", "macaw-large","macaw-11b"]:
             restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
             max_len = 10
             calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"

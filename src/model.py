@@ -77,7 +77,7 @@ class PromptModel():
             self.tokenizer = T5Tokenizer.from_pretrained(f"allenai/{model_name}-1251000")
             self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}-1251000").to(device)
 
-        elif model_name in ["macaw-3b","macaw-large"]:
+        elif model_name in ["macaw-3b","macaw-large","macaw-11b"]:
             self.tokenizer = T5Tokenizer.from_pretrained(f"allenai/{model_name}")
             self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}").to(device)
 
