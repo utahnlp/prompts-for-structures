@@ -52,7 +52,6 @@ spacy==3.4.1
 spacy-legacy==3.0.9
 spacy-loggers==1.0.3
 srsly==2.4.4
--e git+https://github.com/caffeine96/prompts-for-structures.git@e3e4f06304c8997cbcf3babc8671537f605cd232#egg=tasks
 thinc==8.1.0
 threadpoolctl==3.1.0
 tokenizers==0.12.1
