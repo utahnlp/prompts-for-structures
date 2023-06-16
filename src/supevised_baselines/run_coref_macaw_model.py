@@ -74,7 +74,7 @@ class CorefClassifier(torch.nn.Module):
 
 
 
-    def train(self, model_dir, lr = 0.00001, max_epochs=20, e_stop=5):
+    def train(self, model_dir, lr = 0.000005, max_epochs=20, e_stop=5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = CorefDataset(train_prompts, train_labs)
         train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=8)
