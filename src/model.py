@@ -66,6 +66,7 @@ class PromptModel():
             self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
         elif model_name in ["t5-11b"]:
             self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+            self.model = T5ForConditionalGeneration.from_pretrained(model_name, device_map='auto')
             self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
             #self.model = T5ForConditionalGeneration.from_pretrained(model_name, load_in_8bit=True, device_map='auto')#.to(device)
         elif model_name in ["flan-t5-xl"]:
