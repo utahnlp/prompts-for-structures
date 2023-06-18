@@ -147,12 +147,80 @@ def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
                     print(ques_str)
                     processed_data.append(
                         [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
-                    outfile.writerow([ques_str, sent_id, predicate, type, arg_role])
+                    outfile.writerow([ques_str, arg, sent_id, predicate, type, arg_role, predicate_role, sentence])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
 
     return data_df
+
+
+def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
+    """ Preprocessing function for ACE with questions.
+    Input
+    ----------------------
+    filepath: str or pathlib.Path. Input data file path
+
+    Output
+    ----------------------
+    data_df: pd.DataFrame. Dataframe where each row represents a row
+            for prompting.
+    """
+    # predicate : argument : question
+    q_dict = read_questions()
+    print(q_dict)
+    infile = jsonlines.open(filepath)
+    processed_data = []
+    outfile = csv.writer(open('/home/valentinap/workspace/prompts-for-structures/dumps/argument_questions.csv', 'w'))
+    covered = {}
+    for row in infile:
+        sent_id = row['sent_id']
+        sentence = row['sentence']
+        event_mentions = row["event_mentions"]
+        if len(event_mentions)>0:
+            for event_mention in event_mentions:
+                arguments = event_mention["arguments"]
+                if len(arguments)>0:
+                    predicate = event_mention['trigger']['text']
+                    predicate_role = event_mention["event_type"].split(':')
+                    predicate_role = '_'.join(predicate_role)
+                    for arg in arguments:
+                        arg_role = arg["role"]
+                        gold_arg = arg["text"]
+                        gold_span = arg["start"]+':'+arg["end"]
+                        if predicate_role in q_dict:
+                            if arg_role in q_dict[predicate_role]:
+                                if sent_id+predicate+arg_role in covered:
+                                    question = q_dict[predicate_role][arg_role][-1]
+                                else:
+                                    question = q_dict[predicate_role][arg_role][0]
+                            else:
+                                print(predicate_role)
+                                print(arg_role)
+                        else:
+                            print(predicate_role)
+                            print(arg_role)
+                        ques_str = question
+                        if ques_str.startswith('Where does the event'):
+                            ques_str = re.sub('event', predicate, ques_str)
+                        if ques_str.startswith('When does it'):
+                            ques_str = re.sub('it', 'the '+predicate, ques_str)
+                        ques_str = re.sub('the event', 'the ' + predicate, ques_str)
+                        ans_str = arg["text"]
+                        ans_span = arg["span"]
+                        ans_span = ans_span.split(':')
+                        ans_span = [[int(ans_span[0]),int(ans_span[1])]]
+                        covered[sent_id+predicate+arg_role]=True
+                        processed_data.append(
+                            [sent_id, sentence, predicate, ques_str, ans_str, ans_span])
+                        outfile.writerow(
+                            [ques_str, arg, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
+
+    columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
+    data_df = pd.DataFrame(processed_data, columns=columns)
+
+    return data_df
+
 
 def preprocess_ace_questions(filepath: Union[str, Path]) -> pd.DataFrame:
     """ Preprocessing function for ACE with questions.

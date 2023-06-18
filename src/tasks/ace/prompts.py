@@ -60,7 +60,7 @@ def prompt_ace_types_yes_no(data: pd.DataFrame, config: Config) -> Tuple[List[st
                 prompts.append(f"""question: {question} context: {row["sentence"]} """)
             elif config.model in ["macaw-3b"]:
                 prompts.append(
-                    f"""$answer$ ; $mcoptions$=(A) Yes (B) No  ; {sent} {question}?""")
+                    f"""$answer$ ; $mcoptions$=(A) Yes (B) No  ; {sent} {question}""")
 
             gold.append(row["answer"])
 
