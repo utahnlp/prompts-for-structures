@@ -187,7 +187,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                     for arg in arguments:
                         arg_role = arg["role"]
                         gold_arg = arg["text"]
-                        gold_span = arg["start"]+':'+arg["end"]
+                        gold_span = str(arg["start"])+':'+str(arg["end"])
                         if predicate_role in q_dict:
                             if arg_role in q_dict[predicate_role]:
                                 if sent_id+predicate+arg_role in covered:

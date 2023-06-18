@@ -14,7 +14,7 @@ INFERENCE_DICT = {
             "srl" : inference_srl,
             "coref": inference_coref,
             "ace" : inference_ace,
-            "ace_type" : inference_ace
+            "ace_types" : inference_ace
         }
 
 
