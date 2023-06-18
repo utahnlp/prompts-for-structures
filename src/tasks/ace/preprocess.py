@@ -206,11 +206,12 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                         if ques_str.startswith('When does it'):
                             ques_str = re.sub('it', 'the '+predicate, ques_str)
                         ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-                        ans_span = ans_span.split(':')
+
+                        ans_span = gold_span.split(':')
                         ans_span = [[int(ans_span[0]),int(ans_span[1])]]
                         covered[sent_id+predicate+arg_role]=True
                         processed_data.append(
-                            [sent_id, sentence, predicate, ques_str, gold_arg, gold_span])
+                            [sent_id, sentence, predicate, ques_str, gold_arg, ans_span])
                         outfile.writerow(
                             [ques_str, arg, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
 
