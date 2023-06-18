@@ -76,6 +76,8 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
         sentence = row['sentence']
         predicate = row['predicate']
         predicate_role = row['event_type']
+        gold_arg = row["gold_argument"]
+        gold_span = row["gold_span"]
         #TODO: for now I am only predicting for existing arguments!
         predicted_arguments = row["predicted_arguments"].split('%%%')
         arg_role = row["role_type"]
@@ -84,19 +86,13 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
             if predicate_role in q_dict:
                 if arg_role in q_dict[predicate_role]:
                     types = q_dict[predicate_role][arg_role]
-                else:
-                    print(predicate_role)
-                    print(arg_role)
-            else:
-                print(predicate_role)
-                print(arg_role)
             for type in types:
                 if type in type_q_dict:
                     ques_str = type_q_dict[type]
                     print(ques_str)
                     processed_data.append(
                         [sent_id, sentence, predicate, ques_str, ans_str])
-                    outfile.writerow([ques_str, sent_id, predicate, type, arg_role])
+                    outfile.writerow([ques_str, arg, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer"]
     data_df = pd.DataFrame(processed_data, columns=columns)
