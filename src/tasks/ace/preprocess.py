@@ -195,12 +195,15 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                                 else:
                                     question = q_dict[predicate_role][arg_role][0]
                             else:
+                                print("oh no")
                                 print(predicate_role)
                                 print(arg_role)
                         else:
+                            print("oh no")
                             print(predicate_role)
                             print(arg_role)
                         ques_str = question
+                        print(question)
                         if ques_str.startswith('Where does the event'):
                             ques_str = re.sub('event', predicate, ques_str)
                         if ques_str.startswith('When does it'):
