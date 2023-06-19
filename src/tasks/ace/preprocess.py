@@ -179,7 +179,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
     covered = {}
     for row in infile:
         sent_id = row['sent_id']
-        sentence = row['sentence']
+        sentence = ' '.join(row['tokens'])
         event_mentions = row["event_mentions"]
         if len(event_mentions)>0:
             for event_mention in event_mentions:
@@ -220,7 +220,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                         processed_data.append(
                             [sent_id, sentence, predicate, ques_str, gold_arg, ans_span])
                         outfile.writerow(
-                            [ques_str, arg, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
+                            [ques_str, arg, gold_arg, gold_span, sent_id, predicate, arg_role, predicate_role, sentence])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
