@@ -186,6 +186,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                 arguments = event_mention["arguments"]
                 if len(arguments)>0:
                     predicate = event_mention['trigger']['text']
+                    predicate_indices = str(event_mention['trigger']["start"])+':'+str(event_mention['trigger']["end"])
                     predicate_role = event_mention["event_type"].split(':')
                     predicate_role = '_'.join(predicate_role)
                     for arg in arguments:
@@ -220,7 +221,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                         processed_data.append(
                             [sent_id, sentence, predicate, ques_str, gold_arg, ans_span])
                         outfile.writerow(
-                            [ques_str, arg, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
+                            [ques_str, predicate_indices, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer", "ans_span"]
     data_df = pd.DataFrame(processed_data, columns=columns)
