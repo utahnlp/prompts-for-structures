@@ -58,8 +58,8 @@ for uncon_gen, row in zip(uncon_gens, infile):
             event_dict["event_type"] = ':'.join(row[8].split('_'))
             event_dict["trigger"] = {}
             event_dict["trigger"]["text"] = row[5]
-            event_dict["trigger"]["start"] = int(row[3].split(':')[0])
-            event_dict["trigger"]["end"] = int(row[3].split(':')[1])
+            event_dict["trigger"]["start"] = int(row[1].split(':')[0])
+            event_dict["trigger"]["end"] = int(row[1].split(':')[1])
             event_dict["arguments"] = []
             arg_dict = {}
             arg_dict["text"] = uncon_gen
@@ -96,8 +96,8 @@ for uncon_gen, row in zip(uncon_gens, infile):
         event_dict["event_type"] = ':'.join(row[8].split('_'))
         event_dict["trigger"] = {}
         event_dict["trigger"]["text"] = row[5]
-        event_dict["trigger"]["start"] = int(row[3].split(':')[0])
-        event_dict["trigger"]["end"] = int(row[3].split(':')[1])
+        event_dict["trigger"]["start"] = int(row[1].split(':')[0])
+        event_dict["trigger"]["end"] = int(row[1].split(':')[1])
         event_dict["arguments"] = []
         arg_dict = {}
         arg_dict["text"] = uncon_gen
