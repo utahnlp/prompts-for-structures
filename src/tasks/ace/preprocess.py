@@ -31,7 +31,7 @@ def read_type_questions_yesno():
 def read_types():
     # predicate : argument : types
     type_dict = defaultdict(lambda: defaultdict(lambda: []))
-    infile = csv.reader(open('../data/questions/type_question_map2.tsv'), delimiter='\t')
+    infile = csv.reader(open('../data/questions/type_question_map_veronica.tsv'), delimiter='\t')
 
     for row in infile:
         #if not 'Time' in row[0]:
@@ -44,7 +44,7 @@ def read_types():
 def read_questions():
     # predicate : argument : question
     q_dict = defaultdict(lambda : defaultdict(lambda : []))
-    infile = csv.reader(open('../data/questions/type_question_map2.tsv'), delimiter='\t')
+    infile = csv.reader(open('../data/questions/type_question_map_veronica.tsv'), delimiter='\t')
 
     for row in infile:
         #if not 'Time' in row[0]:
