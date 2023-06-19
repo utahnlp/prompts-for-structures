@@ -212,8 +212,8 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                         if ques_str.startswith('When does it'):
                             ques_str = re.sub('it', 'the '+predicate, ques_str)
                         ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-                        ques_str = re.sub('trigger}', predicate, ques_str)
-                        print(question)
+                        ques_str = re.sub('\{trigger}', predicate, ques_str)
+                        print(ques_str)
                         ans_span = gold_span.split(':')
                         ans_span = [[int(ans_span[0]),int(ans_span[1])]]
                         covered[sent_id+predicate+arg_role]=True
