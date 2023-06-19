@@ -169,7 +169,6 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
     # predicate : argument : question
     q_dict = read_questions()
     print(q_dict)
-    sys.exit(0)
     infile = jsonlines.open(filepath)
     processed_data = []
     outfile = csv.writer(open('/home/valentinap/workspace/prompts-for-structures/dumps/argument_questions.csv', 'w'))
