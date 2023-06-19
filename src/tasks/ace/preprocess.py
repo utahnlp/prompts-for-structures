@@ -212,7 +212,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                         if ques_str.startswith('When does it'):
                             ques_str = re.sub('it', 'the '+predicate, ques_str)
                         ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-                        ques_str = re.sub(r'\{trigger\}', predicate, ques_str)
+                        ques_str = re.sub(r'\{trigger}', predicate, ques_str)
                         print(question)
                         ans_span = gold_span.split(':')
                         ans_span = [[int(ans_span[0]),int(ans_span[1])]]
