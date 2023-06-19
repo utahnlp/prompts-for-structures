@@ -256,7 +256,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                     predicate_indices = str(event_mention['trigger']["start"])+':'+str(event_mention['trigger']["end"])
                     predicate_role = event_mention["event_type"].split(':')
                     predicate_role = '_'.join(predicate_role)
-                    all_arg_roles = q_dict[predicate_role]
+                    all_arg_roles = q_dict[predicate_role].keys()
                     covered = []
                     for arg in arguments:
                         arg_role = arg["role"]
