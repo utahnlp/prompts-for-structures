@@ -36,6 +36,8 @@ def read_types():
     for row in infile:
         #if not 'Time' in row[0]:
         predicate, arg = row[0].split('_')
+        if arg.startswith('Time'):
+            arg = 'Time'
         predicate = '_'.join(predicate.split('.'))
         type_dict[predicate][arg] = row[2:]
 
@@ -49,6 +51,8 @@ def read_questions():
     for row in infile:
         #if not 'Time' in row[0]:
         predicate, arg = row[0].split('_')
+        if arg.startswith('Time'):
+            arg = 'Time'
         predicate = '_'.join(predicate.split('.'))
         q_dict[predicate][arg].append(row[1])
 
@@ -203,13 +207,13 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
                             print(predicate_role)
                             print(arg_role)
                         ques_str = question
-                        print(question)
                         if ques_str.startswith('Where does the event'):
                             ques_str = re.sub('event', predicate, ques_str)
                         if ques_str.startswith('When does it'):
                             ques_str = re.sub('it', 'the '+predicate, ques_str)
                         ques_str = re.sub('the event', 'the ' + predicate, ques_str)
-
+                        ques_str = re.sub('{trigger}', predicate, ques_str)
+                        print(question)
                         ans_span = gold_span.split(':')
                         ans_span = [[int(ans_span[0]),int(ans_span[1])]]
                         covered[sent_id+predicate+arg_role]=True
