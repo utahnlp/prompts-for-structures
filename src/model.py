@@ -67,7 +67,9 @@ class PromptModel():
         elif model_name == "macaw-3b":
             self.tokenizer = T5Tokenizer.from_pretrained("allenai/macaw-3b")
             self.model = T5ForConditionalGeneration.from_pretrained("allenai/macaw-3b").to(device)
-
+        elif model_name in ["flan-t5-xl"]:
+            self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl")
+            self.model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-xl").to(device)
 
     def calibrate(self, beam_size, restrict_ans= ["Yes","No"], max_len = 2, calib_prompt="Yes or No?"):
         if self.config.task_name in ['coref']:
