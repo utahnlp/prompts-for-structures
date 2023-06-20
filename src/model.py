@@ -246,6 +246,7 @@ if __name__ == "__main__":
     ### Generate & dump generations and gold
     if run_generate:
         _, gold, gens = model.generate(beam_size=20, test_mode=False)
+
         # plot_yes_no(gold[:len(gens)], gens, prefix='calib_macaw3b_')
 
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_gens.bin", "wb") as out:

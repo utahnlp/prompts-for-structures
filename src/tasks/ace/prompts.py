@@ -27,7 +27,7 @@ def prompt_ace(data: pd.DataFrame, config) -> Tuple[List[str], List[str]]:
         gold = []
 
         for ix, row in data.iterrows():
-            if config.model in ["t5", "t5-11b", "t5-3b"]:
+            if config.model in ["t5", "t5-11b", "t5-3b", "flan-t5-xl"]:
                 prompts.append(f"""question: {row["question"]} context: {row["sentence"]} """)
             elif config.model == "unified-qa":
                 prompts.append(f"""{row["question"]} \n {row["sentence"]} """)
