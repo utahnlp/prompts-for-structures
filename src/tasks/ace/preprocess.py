@@ -158,7 +158,7 @@ def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
 
     return data_df
 
-def preprocess_ace_vero_old(filepath: Union[str, Path]) -> pd.DataFrame:
+def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
     """ Preprocessing function for ACE with questions.
     Input
     ----------------------
@@ -227,7 +227,7 @@ def preprocess_ace_vero_old(filepath: Union[str, Path]) -> pd.DataFrame:
 
     return data_df
 
-def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
+def preprocess_ace_vero_null(filepath: Union[str, Path]) -> pd.DataFrame:
     """ Preprocessing function for ACE with questions.
     Input
     ----------------------
