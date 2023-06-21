@@ -93,7 +93,8 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
                     print(ques_str)
                     processed_data.append(
                         [sent_id, sentence, predicate, ques_str, ans_str])
-                    row.append(type, ques_str)
+                    row.append(type)
+                    row.append(ques_str)
                     outfile.writerow(row)
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer"]
