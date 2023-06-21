@@ -12,7 +12,12 @@ from tasks.srl.qasrl2.preprocess import preprocess_qasrl2
 
 def build_prompt(config, row):
     if config.model in ["t5","t5-11b","t5-3b","t5-small","t5-base"]:
-        return f"""question: {row["question"]} context: {" ".join(row["sentence"])} """
+        if len(row["sentence"])>300:
+            sent = " ".join(row["sentence"][:300])
+        else:
+            sent = " ".join(row["sentence"])
+        return f"""question: {row["question"]} context: {sent} """
+        #return f"""question: {row["question"]} context: {" ".join(row["sentence"])} """
     elif (config.model == "unified-qa") or (config.model[:12] == "unifiedqa-v2"):   
         return f"""{row["question"].lower()} \n {" ".join(row["sentence"]).lower()} """
     elif config.model == "flan-t5-xl":
