@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 from pathlib import Path
 from sklearn.metrics import f1_score
@@ -18,7 +19,7 @@ GPU_ID='1'
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 
 
@@ -80,14 +81,14 @@ class SRLExtractor(torch.nn.Module):
         return prompts, labels
 
 
-    def train(self, model_dir, lr = 0.00001, max_epochs=20, e_stop = 5):
+    def train(self, model_dir, lr = 0.000001, max_epochs=20, e_stop = 5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = SRLDataset(train_prompts, train_labs)
         train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=8)
 
         dev_prompts, dev_labs = self.process_eval_prompts(self.dev_df)
         dev_dataset = SRLDataset(dev_prompts, dev_labs)
-        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=6)
+        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=4)
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
@@ -146,7 +147,7 @@ class SRLExtractor(torch.nn.Module):
                 for ix in range(outputs.shape[0]):
                     output_ans = self.tokenizer.decode(outputs[ix], skip_special_tokens=True)
                     pred_ans.append(output_ans.strip())
-                 
+            torch.cuda.empty_cache() 
         corr = 0                    
         for ix in range(len(pred_ans)):
             if pred_ans[ix] in gold_labs[ix].split(" ### "):
@@ -189,17 +190,19 @@ class SRLExtractor(torch.nn.Module):
         return generations
 
 
+
+
 if __name__ == "__main__":
-    dataset_name = "wiki"
+    dataset_name = "qasrl2"
     mode = "train"
-    DATA_DIR =  "./../../data/"
+    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/"
 
 
-    train_file = DATA_DIR + "wiki1.train.qa"
-    dev_file   = DATA_DIR + "wiki1.dev.qa"
-    test_file = DATA_DIR + "wiki1.test.qa"
+    train_file = DATA_DIR + "qasrl-v2/orig/train.jsonl"
+    dev_file   = DATA_DIR + "qasrl-v2/orig/dev.jsonl"
+    test_file = DATA_DIR + "qasrl-v2/orig/test.jsonl"
 
-    model_dir = f"./../../models/sup_baseline/srl/{dataset_name}/{SEED}/"
+    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/srl/{dataset_name}/{SEED}/"
 
     srl_model = SRLExtractor(train_file, dev_file, test_file, dataset_name)
     if mode == "train":

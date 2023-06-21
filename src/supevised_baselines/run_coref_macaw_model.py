@@ -20,7 +20,7 @@ GPU_ID='1'
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 
 
@@ -77,11 +77,11 @@ class CorefClassifier(torch.nn.Module):
     def train(self, model_dir, lr = 0.000005, max_epochs=20, e_stop=5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = CorefDataset(train_prompts, train_labs)
-        train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=8)
+        train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=4)
 
         dev_prompts, dev_labs = self.process_eval_prompts(self.dev_df)
         dev_dataset = CorefDataset(dev_prompts, dev_labs)
-        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=4)
+        dev_loader = data.DataLoader(dataset=dev_dataset, shuffle=False, batch_size=2)
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
@@ -93,6 +93,8 @@ class CorefClassifier(torch.nn.Module):
         for ep in range(max_epochs):
             print(f"Epoch {ep+1}")
             tr_loss = []
+
+            self.model.train()
 
             for pro, labs in tqdm(train_loader):
                 input_ids = self.tokenizer(pro, return_tensors="pt", padding=True).input_ids
@@ -130,6 +132,8 @@ class CorefClassifier(torch.nn.Module):
         max_len = 10
         beam_size = 20
 
+        self.model.eval()
+
         def restrict_decode_vocab(batch_idx, prefix_beam):
             """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169"""
             return self.tokenizer(restriction, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
@@ -156,6 +160,7 @@ class CorefClassifier(torch.nn.Module):
                         elif output_ans.strip() == "$answer$ = No":
                             pred_ans.append("No")
                             break
+                torch.cuda.empty_cache()
 
         f_score = f1_score(gold_labs , pred_ans, average='macro')  
          
@@ -174,6 +179,8 @@ class CorefClassifier(torch.nn.Module):
         beam_size = 20
 
         generations = []
+
+        self.model.eval()
 
         def restrict_decode_vocab(batch_idx, prefix_beam):
             """ Function to restrict decode vocab to some tokens. Source: https://github.com/huggingface/transformers/issues/15169"""
@@ -231,19 +238,32 @@ class CorefClassifier(torch.nn.Module):
                             prompt_gens.append({"sentence":"Yes", "score":l2})
                    
                     generations.append(prompt_gens)
+                torch.cuda.empty_cache() 
 
         return generations
 
 
 if __name__ == "__main__":
-    dataset_name = "ecbp"
+    dataset_name = "genia"
     mode = "train"
-    DATA_DIR =  "./../../data/awesomecoref/processed_ecb/data/ecb/gold_singletons/" 
-    train_file = DATA_DIR + "train_entities_corpus_level.conll"
-    dev_file   = DATA_DIR + "dev_entities_corpus_level.conll"
-    test_file = DATA_DIR + "test_entities_corpus_level.conll"
+    #DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/awesomecoref/processed_ecb/data/ecb/gold_singletons/" 
+    #train_file = DATA_DIR + "train_entities_corpus_level.conll"
+    #dev_file   = DATA_DIR + "dev_entities_corpus_level.conll"
+    #test_file = DATA_DIR + "test_entities_corpus_level.conll"
 
-    model_dir = f"./../../models/sup_baseline/coref/{dataset_name}/{SEED}/"
+    #DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/conll-2012/v12/data/{}/data/english/annotations/" 
+    #train_file = DATA_DIR.format("train")
+    #dev_file = DATA_DIR.format("development")
+    #test_file = DATA_DIR.format("test")  
+
+    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/GENIA_MedCo_coreference_corpus_1.0/{}" 
+    train_file = DATA_DIR.format("train")
+    dev_file = DATA_DIR.format("dev")
+    test_file = DATA_DIR.format("test")  
+
+
+
+    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/coref/{dataset_name}/{SEED}/"
 
     coref_model = CorefClassifier(train_file, dev_file, test_file, dataset_name)
     if mode == "train":
