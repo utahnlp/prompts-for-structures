@@ -194,6 +194,9 @@ def preprocess_genia_coref(filepath):
     doc = []
     # Iterating over all the files in the set
     for f in tqdm(files):
+        if str(f)[-12:] in ["10214854.xml","/8513868.xml"]: #Skipping
+            continue
+        
         examples  = preprocess_doc(f)
         doc.extend(examples)
     columns = ["doc_id","passage","sentence","answer","entity1","entity2","entity1_id","entity2_id","sent1","sent2","sent1_id","sent2_id","ent1_ix","ent2_ix","in_order","ent1_ix_glob", "ent2_ix_glob", "mention_id1", "mention_id2"]
