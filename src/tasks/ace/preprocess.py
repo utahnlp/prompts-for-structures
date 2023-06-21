@@ -72,19 +72,16 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
     type_q_dict = read_type_questions_yesno()
     # predicate : argument : types
     q_dict = read_types()
-    infile = csv.DictReader(open(filepath), delimiter=',')
+    infile = csv.reader(open(filepath), delimiter=',')
     processed_data = []
-    outfile = csv.writer(open('type_questions_yesno.csv', 'w'))
+    outfile = csv.writer(open('../dumps/type_questions_yesno.csv', 'w'))
     for row in infile:
-        sent_id = row['event_id']
-        sentence = row['sentence']
-        predicate = row['predicate']
-        predicate_role = row['event_type']
-        gold_arg = row["gold_argument"]
-        gold_span = row["gold_span"]
-        #TODO: for now I am only predicting for existing arguments!
-        predicted_arguments = row["predicted_arguments"].split('%%%')
-        arg_role = row["role_type"]
+        sent_id = row[4]
+        sentence = row[9]
+        predicate = row[5]
+        predicate_role = row[8]
+        predicted_arguments = row[10].split('%%%')
+        arg_role = row[7]
         for arg in predicted_arguments:
             ans_str = arg
             if predicate_role in q_dict:
@@ -96,7 +93,8 @@ def preprocess_ace_types_yesno(filepath: Union[str, Path]) -> pd.DataFrame:
                     print(ques_str)
                     processed_data.append(
                         [sent_id, sentence, predicate, ques_str, ans_str])
-                    outfile.writerow([ques_str, arg, gold_arg, gold_span, sent_id, predicate, type, arg_role, predicate_role, sentence])
+                    row.append(type, ques_str)
+                    outfile.writerow(row)
 
     columns = ["sent_id", "sentence", "predicate", "question", "answer"]
     data_df = pd.DataFrame(processed_data, columns=columns)
