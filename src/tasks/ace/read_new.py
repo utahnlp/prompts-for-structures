@@ -4,13 +4,13 @@ import pickle
 import jsonlines
 
 
-id_arg_file = csv.reader(open('/Users/valentinapy/PycharmProjects/prompts-for-structures/data/dumps_vero/dumps/argument_questions.csv'))
+id_arg_file = csv.reader(open('/Users/valentinapy/PycharmProjects/prompts-for-structures/data/dumps_vero_null/dumps/argument_questions.csv'))
 
 
-with open(f"/Users/valentinapy/PycharmProjects/prompts-for-structures/data/dumps_vero/dumps/ace_ace_t5-3bacevero_gens.bin", "rb") as out:
+with open(f"/Users/valentinapy/PycharmProjects/prompts-for-structures/data/dumps_vero_null/dumps/ace_ace_t5-3bacevero_gens.bin", "rb") as out:
     gens = pickle.load(out)
 
-outfile = csv.writer(open('readable_argument_preds_veronica_for_types.tsv', 'w'))
+outfile = csv.writer(open('readable_argument_preds_veronica_nulls_for_types.tsv', 'w'))
 
 
 
