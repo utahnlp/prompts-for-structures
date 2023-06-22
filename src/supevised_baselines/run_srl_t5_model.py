@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 from pathlib import Path
+import pickle
 from sklearn.metrics import f1_score
 import torch
 from transformers import T5Tokenizer, T5ForConditionalGeneration
@@ -167,7 +168,7 @@ class SRLExtractor(torch.nn.Module):
             with torch.no_grad():
                 outputs = self.model.generate(input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True)
                 
-                candidate_sequences = torch.reshape(outputs.sequences, (input_ids.shape[0], beam_size, max_len))
+                candidate_sequences = torch.reshape(outputs.sequences, (input_ids.shape[0], beam_size, int((outputs.sequences.shape[0])*(outputs.sequences.shape[1])/(input_ids.shape[0]*beam_size))))
                 candidate_sequences_scores = torch.reshape(outputs.sequences_scores, (input_ids.shape[0], beam_size))
                 
                 for in_batch_ix in range(input_ids.shape[0]):
@@ -193,14 +194,18 @@ class SRLExtractor(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    dataset_name = "qasrl2"
-    mode = "train"
-    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/"
+    dataset_name = "wiki"
+    mode = "test"
+    DATA_DIR =  "../../data/"
+    run_generate = True
+    run_inferences = True
 
-
-    train_file = DATA_DIR + "qasrl-v2/orig/train.jsonl"
-    dev_file   = DATA_DIR + "qasrl-v2/orig/dev.jsonl"
-    test_file = DATA_DIR + "qasrl-v2/orig/test.jsonl"
+    train_file = DATA_DIR + "wiki1.train.qa"
+    dev_file = DATA_DIR + "wiki1.dev.qa"
+    test_file = DATA_DIR + "wiki1.test.qa"
+    #train_file = DATA_DIR + "qasrl-v2/orig/train.jsonl"
+    #dev_file   = DATA_DIR + "qasrl-v2/orig/dev.jsonl"
+    #test_file = DATA_DIR + "qasrl-v2/orig/test.jsonl"
 
     model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/srl/{dataset_name}/{SEED}/"
 
@@ -208,7 +213,7 @@ if __name__ == "__main__":
     if mode == "train":
         srl_model.train(model_dir=model_dir)
     else:
-        split = "dev"
+        split = "test"
         if split == "dev":
             eval_df = srl_model.dev_df
         elif split == "test":
@@ -216,23 +221,38 @@ if __name__ == "__main__":
         
         model_path = model_dir + "1"
         
-        eval_prompts, eval_labs = self.process_eval_prompts(self.dev_df)
-        eval_dataset = CorefDataset(eval_prompts, eval_labs)
-        eval_loader = data.DataLoader(dataset=eval_dataset, shuffle=False, batch_size=32)
+        eval_prompts, eval_labs = srl_model.process_eval_prompts(eval_df)
+        eval_dataset = SRLDataset(eval_prompts, eval_labs)
+        eval_loader = data.DataLoader(dataset=eval_dataset, shuffle=False, batch_size=2)
 
         checkpoint = torch.load(model_path)
         coref_model.load_state_dict(checkpoint["model_state_dict"])
 
-        generations = coref_model.predict(eval_loader)
-
+        if run_generate:
+            generations = srl_model.predict(eval_loader)
+            with open(f"./dumps/{dataset_name}_srl_{SEED}_gens.bin", "wb") as out:
+                pickle.dump(generations, out)
+        else:
+            with open(f"./dumps/{dataset_name}_srl_{SEED}_gens.bin", "rb") as out:
+                generations = pickle.load(out)
+        
         uncon_gens = [gen[0]["sentence"] for gen in generations]
+            
         # Unconstrained 
         meta = {"gold_dump_file": f"./../../results/coref/{dataset_name}_finetuned_{SEED}_gold.txt", "pred_dump_file": f"./../../results/coref/{dataset_name}_finetuned_{SEED}_uncons.txt", "constrained":False}
         eval_wikisrl(eval_df, uncon_gens, meta)
 
         # Constrained
         infer_meta = {"thershold": 0.5, "config": {"score_type":"raw"}}
-        cons_ans = inference_srl(eval_df, generations, sanity=False, meta=infer_meta)
+        if run_inferences:
+            cons_ans = inference_srl(eval_df, generations, sanity_check=False, meta=infer_meta)
+            with open(f"./dumps/{dataset_name}_srl_{SEED}_consans.bin", "wb") as out:
+                pickle.dump(cons_ans, out)
+        else:
+            with open(f"./dumps/{dataset_name}_srl_{SEED}_consans.bin", "rb") as out:
+                cons_ans = pickle.load(out)
+            
+ 
         meta = {"gold_dump_file": f"./../../results/coref/{dataset_name}_deberta_{SEED}_gold.txt", "pred_dump_file": f"./../../results/coref/{dataset_name}_deberta_{SEED}_cons.txt", "constrained":True}
         eval_wikisrl(eval_df, cons_ans, meta)
 
