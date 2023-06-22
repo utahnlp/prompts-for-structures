@@ -238,8 +238,8 @@ if __name__ == "__main__":
     spec_det = config.spec_det  # "highlight_fullcontext_rtol"
     read_file_infix = f"{model_name}{read_spec}"
     file_infix = f"{model_name}{spec_det}"
-
-    run_generate = not args['read_generated']
+    #
+    # run_generate = not args['read_generated']
     run_inference_module = not args['read_inferences']
 
     ####### STEP 1. Generation
@@ -258,18 +258,18 @@ if __name__ == "__main__":
     #     gens = pickle.load(out)
     # with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
     #     gold = pickle.load(out)
-    with open(f"./../dumps_questions_args/dumps/filtered_gens2.bin", "rb") as out:
+    with open(f"./../dumps_questions_args/filtered_dumps/filtered_gens_vero.bin", "rb") as out:
         gens = pickle.load(out)
-    with open(f"./../dumps_questions_args/dumps/ace_ace_t5_gold", "rb") as out:
+    with open(f"./../dumps_questions_args/filtered_dumps/gold_vero.bin", "rb") as out:
         gold = pickle.load(out)
 
     ######## STEP 2. Running Inference
     if run_inference_module:
         const_ans = model.constrained_inference(gens, sanity_check=False)
-        with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_consans.bin", "wb") as out:
+        with open(f"./../filtered_dumps/{dataset_name}_{task_name}_{file_infix}_consans.bin", "wb") as out:
             pickle.dump(const_ans, out)
     else:
-        with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_consans.bin", "rb") as out:
+        with open(f"./../filtered_dumps/{dataset_name}_{task_name}_{read_file_infix}_consans.bin", "rb") as out:
             const_ans = pickle.load(out)
     # analyse_beams(gold, gens, root_analysis=True)
 
