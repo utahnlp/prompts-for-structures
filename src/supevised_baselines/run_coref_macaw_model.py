@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 from pathlib import Path
 from sklearn.metrics import f1_score
 import torch
@@ -20,7 +21,7 @@ GPU_ID='1'
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
-device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 
 
@@ -74,7 +75,7 @@ class CorefClassifier(torch.nn.Module):
 
 
 
-    def train(self, model_dir, lr = 0.000005, max_epochs=20, e_stop=5):
+    def train(self, model_dir, lr = 0.0000001, max_epochs=20, e_stop=5):
         train_prompts, train_labs = self.process_prompts(self.train_df)
         train_dataset = CorefDataset(train_prompts, train_labs)
         train_loader = data.DataLoader(dataset=train_dataset, shuffle=True, batch_size=4)
@@ -228,7 +229,7 @@ class CorefClassifier(torch.nn.Module):
                     recalib_scores = out_sf
                     
                     # Sort by descending score
-                    temp = sorted(zip(calib_order, recalib_scores.tolist()),key=lambda i:i[1],reverse=True)
+                    temp = sorted(zip(restriction.copy(), recalib_scores.tolist()),key=lambda i:i[1],reverse=True)
                     
                     # Post-process answers to Yes/No
                     for l1, l2 in temp:
@@ -244,32 +245,35 @@ class CorefClassifier(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    dataset_name = "genia"
-    mode = "train"
-    #DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/awesomecoref/processed_ecb/data/ecb/gold_singletons/" 
-    #train_file = DATA_DIR + "train_entities_corpus_level.conll"
-    #dev_file   = DATA_DIR + "dev_entities_corpus_level.conll"
-    #test_file = DATA_DIR + "test_entities_corpus_level.conll"
+    dataset_name = "ecbp"
+    mode = "test"
+    run_generate = True
+    run_inferences = True
+
+    DATA_DIR =  "../../data/awesomecoref/processed_ecb/data/ecb/gold_singletons/" 
+    train_file = DATA_DIR + "train_entities_corpus_level.conll"
+    dev_file   = DATA_DIR + "dev_entities_corpus_level.conll"
+    test_file = DATA_DIR + "test_entities_corpus_level.conll"
 
     #DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/conll-2012/v12/data/{}/data/english/annotations/" 
     #train_file = DATA_DIR.format("train")
     #dev_file = DATA_DIR.format("development")
     #test_file = DATA_DIR.format("test")  
 
-    DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/GENIA_MedCo_coreference_corpus_1.0/{}" 
-    train_file = DATA_DIR.format("train")
-    dev_file = DATA_DIR.format("dev")
-    test_file = DATA_DIR.format("test")  
+    #DATA_DIR =  "../../data/GENIA_MedCo_coreference_corpus_1.0/{}" 
+    #train_file = DATA_DIR.format("train")
+    #dev_file = DATA_DIR.format("dev")
+    #test_file = DATA_DIR.format("test")  
 
 
 
-    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/coref/{dataset_name}/{SEED}/"
+    model_dir = f"../../models/sup_baseline/coref/{dataset_name}/{SEED}/"
 
     coref_model = CorefClassifier(train_file, dev_file, test_file, dataset_name)
     if mode == "train":
         coref_model.train(model_dir=model_dir)
     else:
-        split = "dev"
+        split = "test"
         if split == "dev":
             eval_df = coref_model.dev_df
         elif split == "test":
@@ -277,14 +281,23 @@ if __name__ == "__main__":
         
         model_path = model_dir + "1"
         
-        eval_prompts, eval_labs = self.process_eval_prompts(self.dev_df)
+        eval_prompts, eval_labs = coref_model.process_eval_prompts(eval_df)
         eval_dataset = CorefDataset(eval_prompts, eval_labs)
-        eval_loader = data.DataLoader(dataset=eval_dataset, shuffle=False, batch_size=32)
+        eval_loader = data.DataLoader(dataset=eval_dataset, shuffle=False, batch_size=2)
 
         checkpoint = torch.load(model_path)
-        coref_model.load_state_dict(checkpoint["model_state_dict"])
+        adapted_dict = {"model."+k:v for k,v in checkpoint["model_state_dict"].items()}
+        coref_model.load_state_dict(adapted_dict)
 
-        generations = coref_model.predict(eval_loader)
+        if run_generate:
+            generations = coref_model.predict(eval_loader)
+            with open(f"./dumps/{dataset_name}_coref_{SEED}_gens.bin", "wb") as out:
+                pickle.dump(generations, out)
+        else:
+            with open(f"./dumps/{dataset_name}_coref_{SEED}_gens.bin", "rb") as out:
+                generations = pickle.load(out)
+
+
 
         eval_dict = {"ecbp": eval_ecbplus, "ontonotes": eval_ontonotes, "genia": eval_ontonotes}
 
@@ -293,10 +306,27 @@ if __name__ == "__main__":
         meta = {"gold_dump_file": f"./../../results/coref/{dataset_name}_finetuned_{SEED}_gold.txt", "pred_dump_file": f"./../../results/coref/{dataset_name}_finetuned_{SEED}_uncons.txt", "constrained":False}
         eval_dict[dataset_name](eval_df, uncon_gens, meta)
 
+
+        class dotdict(dict):
+            """dot.notation access to dictionary attributes"""
+            __getattr__ = dict.get
+            __setattr__ = dict.__setitem__
+            __delattr__ = dict.__delitem__
+        
         # Constrained
-        infer_meta = {"thershold": 0.5, "config": {"score_type":"raw"}}
-        cons_ans = inference_coref(eval_df, generations, sanity=False, meta=infer_meta)
-        meta = {"gold_dump_file": f"./../../results/coref/{dataset_name}_deberta_{SEED}_gold.txt", "pred_dump_file": f"./../../results/coref/{dataset_name}_deberta_{SEED}_cons.txt", "constrained":True}
+        infer_meta = {"thresh": 0.5, "config": dotdict({"score_type":"raw"})}
+        
+       
+        if run_inferences:
+            cons_ans = inference_coref(eval_df, generations, sanity_check=False, meta=infer_meta)
+            with open(f"./dumps/{dataset_name}_coref_{SEED}_consans.bin", "wb") as out:
+                pickle.dump(cons_ans, out)
+        else:
+            with open(f"./dumps/{dataset_name}_coref_{SEED}_consans.bin", "rb") as out:
+                cons_ans = pickle.load(out)
+         
+        
+        meta = {"gold_dump_file": f"./../../results/coref/{dataset_name}_finetuned_{SEED}_gold.txt", "pred_dump_file": f"./../../results/coref/{dataset_name}_finetuned_{SEED}_cons.txt", "constrained":True}
         eval_dict[dataset_name](eval_df, cons_ans, meta)
 
 
