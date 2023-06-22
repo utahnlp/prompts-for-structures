@@ -24,8 +24,8 @@ for item, row in zip(gens, infile):
             preds = row[10].split('%%%')
             scores = row[11].split('%%%')
             pred = preds[count]
-            score = preds[count]
-            arg_dict[row[4]+row[5]+row[7]].append([{"sentence": pred, "score": score}])
+            score = float(scores[count])
+            arg_dict[row[4]+row[5]+row[7]].append({"sentence": pred, "score": score})
             gold_dict[row[4]+row[5]+row[7]] = row[2]
         except IndexError:
             pass
@@ -39,7 +39,7 @@ gold_list = []
 with open(f"filtered_gens_vero.bin", "wb") as outfile:
     for key, value in arg_dict.items():
         gold_list.append(gold_dict[key])
-        out.append(value)
+        out+=value
     pickle.dump(out, outfile)
 
 with open(f"gold_vero.bin", "wb") as outfile:
