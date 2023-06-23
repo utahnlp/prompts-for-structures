@@ -233,7 +233,6 @@ def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False, ans_span
     for g_ix, gen_q in enumerate(generations):  #Loops over all the questions
         for beam_ix in range(len(gen_q)):       #Loops over all the beams in the question
             # We consider only continuous spans for extraction
-            print(gen_q)
             match, s_ix, e_ix = subseq_match(gen_q[beam_ix]["sentence"].split(), tokens)
             # Considering matched subsequences
             #if match:
