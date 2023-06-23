@@ -88,6 +88,7 @@ def get_consistency_violations(sentence, generations):
                 e_ix = quer[1]
                 for test_q in test_ids:
                     if ((s_ix >= test_q[0]) and (s_ix < test_q[1])) or ((e_ix > test_q[0]) and (e_ix <= test_q[1])):
+                        print()
                         pass  # This implies violation. We need to check for all combinations
                     else:
                         flag = False
