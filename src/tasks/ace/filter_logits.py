@@ -9,6 +9,7 @@ gold_list = []
 out = []
 for row in infile:
     gold = row[2]
+    gold_list.append(gold)
     args = row[10].split('%%%')
     scores = row[11].split('%%%')
     for arg, score in zip(args, scores):
