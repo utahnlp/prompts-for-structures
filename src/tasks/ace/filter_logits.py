@@ -12,7 +12,11 @@ for row in infile:
     args = row[10].split('%%%')
     scores = row[11].split('%%%')
     for arg, score in zip(args, scores):
-        out.append([{"sentence": arg, "score": score}])
+        score = float(score)
+        if score < -0.05:
+            out.append([{"sentence": 'None', "score": score}])
+        else:
+            out.append([{"sentence": arg, "score": score}])
 
 with open(f"../../../data/filtered_gens_vero_null.bin", "wb") as outfile:
     pickle.dump(out, outfile)
