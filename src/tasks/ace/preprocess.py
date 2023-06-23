@@ -157,7 +157,7 @@ def preprocess_ace_types(filepath: Union[str, Path]) -> pd.DataFrame:
 
     return data_df
 
-def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
+def preprocess_ace_vero_old(filepath: Union[str, Path]) -> pd.DataFrame:
     """ Preprocessing function for ACE with questions.
     Input
     ----------------------
@@ -226,7 +226,7 @@ def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
 
     return data_df
 
-def preprocess_ace_vero_null(filepath: Union[str, Path]) -> pd.DataFrame:
+def preprocess_ace_vero(filepath: Union[str, Path]) -> pd.DataFrame:
     """ Preprocessing function for ACE with questions.
     Input
     ----------------------
@@ -242,7 +242,7 @@ def preprocess_ace_vero_null(filepath: Union[str, Path]) -> pd.DataFrame:
     print(q_dict)
     infile = jsonlines.open(filepath)
     processed_data = []
-    outfile = csv.writer(open('/home/valentinap/workspace/prompts-for-structures/dumps/argument_questions.csv', 'w'))
+    outfile = csv.writer(open('/home/valentinap/workspace/prompts-for-structures/dumps/argument_questions_null.csv', 'w'))
     for row in infile:
         sent_id = row['sent_id']
         sentence = ' '.join(row['tokens'])
