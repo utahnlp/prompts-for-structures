@@ -258,9 +258,9 @@ if __name__ == "__main__":
     #     gens = pickle.load(out)
     # with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
     #     gold = pickle.load(out)
-    with open(f"./../filtered_dumps/filtered_gens_vero.bin", "rb") as out:
+    with open(f"./../filtered_dumps/filtered_gens_vero_null.bin", "rb") as out:
         gens = pickle.load(out)
-    with open(f"./../filtered_dumps/gold_vero.bin", "rb") as out:
+    with open(f"./../filtered_dumps/gold_vero_null.bin", "rb") as out:
         gold = pickle.load(out)
 
     ######## STEP 2. Running Inference
