@@ -12,12 +12,14 @@ for row in infile:
     gold_list.append(gold)
     args = row[10].split('%%%')
     scores = row[11].split('%%%')
-    for arg, score in zip(args, scores):
-        score = float(score)
-        if score < -0.05:
-            out.append([{"sentence": 'None', "score": score}])
-        else:
-            out.append([{"sentence": arg, "score": score}])
+    if float(scores[0]) < -0.5:
+        out.append([{"sentence": 'None', "score": float(scores[0])}])
+    else:
+        inner_out = []
+        for arg, score in zip(args, scores):
+            score = float(score)
+            inner_out.append({"sentence": arg, "score": score})
+        out.append(inner_out)
 
 with open(f"../../../data/filtered_gens_vero_null.bin", "wb") as outfile:
     pickle.dump(out, outfile)

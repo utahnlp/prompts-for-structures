@@ -257,7 +257,7 @@ def construct_graph(sent, generations, inst_ix, gold_ans, sanity=False, ans_span
                                 continue
                     g.add_edges(start_ix, end_ix, gen_q[0]["score"]-gen_q[beam_ix]["score"]+s_add,{"label":f"{g_ix+1}", "beam_pos":beam_ix})
     try:
-        sh_paths = yens_ksp(g,0,len(tokens), K=40)
+        sh_paths = yens_ksp(g,0,len(tokens), K=20)
     except IndexError:
         print(tokens)
         print(ans_span)
