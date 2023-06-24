@@ -12,7 +12,7 @@ for row in infile:
     gold_list.append(gold)
     args = row[10].split('%%%')
     scores = row[11].split('%%%')
-    if float(scores[0]) < -0.5:
+    if float(scores[0]) < -0.6:
         out.append([{"sentence": 'None', "score": float(scores[0])}])
     else:
         inner_out = []
