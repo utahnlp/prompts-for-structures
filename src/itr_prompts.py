@@ -1,7 +1,18 @@
-
-
-
-def construct_cot_prompt_srl(sent, ques, prev_ques, pr_type="wo_ans_string"):
+def construct_itr_prompt_srl(sent, ques, prev_ques, pr_type="wo_ans_string"):
+    """ Constructs the prompts for SRL
+    Inputs
+    -----------------
+    sent: List[str] or str. The sentence either in the string form or space tokenized
+    ques: str. The question as per the QA SRL data
+    prev_ques: List[str]. List of questions encountered previously in the structure
+    pr_type: str. Values in {"wo_ans_string", "with_ans_string"}. When set to "with_ans_string", slots
+                for filling answers observed earlier for the previous questions are introduced in the prompt. 
+                These will be filled once answeers are generated in the generation step
+    
+    Output
+    ----------------
+    inst: List[str]. List of input prompts for the model
+    """
     if len(prev_ques) == 0: 
         if type(sent) != list:
             return f"""{sent} \n In the above sentence, {ques}"""
@@ -32,7 +43,19 @@ def construct_cot_prompt_srl(sent, ques, prev_ques, pr_type="wo_ans_string"):
 
 
 
-def construct_cot_prompt_coref(sent, ent1, ent2, prev_ques):
+def construct_itr_prompt_coref(sent, ent1, ent2, prev_ques):
+     """ Constructs the prompts for Coref
+    Inputs
+    -----------------
+    sent: List[str] or str. The sentence either in the string form or space tokenized
+    ques: str. The question as per the QA SRL data
+    prev_ques: List[str]. List of questions encountered previously in the structure
+     
+    Output
+    ----------------
+    inst: List[str]. List of input prompts for the model
+    """
+
     if len(prev_ques) == 0:
         return f"""{sent} \n In the above passage, does {ent1} refer to {ent2}? Yes or No?"""
     else:

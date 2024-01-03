@@ -1,4 +1,4 @@
-from cot_prompts import construct_cot_prompt_srl, construct_cot_prompt_coref
+from itr_prompts import construct_itr_prompt_srl, construct_itr_prompt_coref
 from evaluate import evaluate
 from graph import construct_graph, Graph
 from utils import Config, analyse_beams, restrict_vocab
@@ -19,11 +19,7 @@ from typing import Union
 
 GPU_ID = "0"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
-#device = "cpu"
 torch.manual_seed(2121)
-
-#problematic_ix = [709,710,711,1219,1220,1221,1502,1503,2694,2695,2696,2697,2921,2922,2923,3263,3264,3265,3266,3267,3390,3405,3406,3459,3460,4214,4215,4216,4508,4509,4510]
-#problematic_ix = [4145,4146,4147,4457,4458,4459,4460,5856,5857,5858,5926,5927,5928]
 
 
 class PromptModel():
@@ -44,103 +40,37 @@ class PromptModel():
                     dataset = self.config.dataset_name
                 )
         
-        print(f"Total number of queries: {len(self.data)}")
-        #ids = 21
-        #print(self.data["sentence"].iloc[ids])
-        #print(self.data["entity1"].iloc[ids])
-        #print(self.data["entity2"].iloc[ids])
-        #print(self.data["answer"].iloc[ids])
-         
+        print(f"Total number of queries: {len(self.data)}")        
         self.init_model(self.config.model)
 
 
 
     def init_model(self, model_name: str):
         """ Initialize tokenizers and models Initialize tokenizers and models.
-        Models currently supported - "t5-{large,3b,11b}, unified-qa, macaw-3b"
+        Models currently supported - "flan-t5-xl"
         """
-        if model_name == "t5":
-            self.tokenizer = T5Tokenizer.from_pretrained("t5-large")
-            self.model = T5ForConditionalGeneration.from_pretrained("t5-large").to(device)
-        elif model_name in ["t5-small","t5-base","t5-3b"]:
-            self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-            self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
-        elif model_name in ["t5-11b"]:
-            self.tokenizer = T5Tokenizer.from_pretrained(model_name, model_max_length=512)
-            self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-            device_map = {0: [0, 1, 2, 3, 4, 5, 6], 1:[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]}
-            self.model.parallelize(device_map=device_map)
-            #self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
-            #self.model = T5ForConditionalGeneration.from_pretrained(model_name, device_map='auto')#.to(device)
-
-            #self.model = T5ForConditionalGeneration.from_pretrained(model_name, load_in_8bit=True, device_map='auto')#.to(device)
-        elif model_name in ["flan-t5-xl"]:
-            if self.config.task_name == "coref":
-                print("here")
-                self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl", model_max_length=1024)
-            else:
-                self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl")
-
+        if model_name in ["flan-t5-xl"]:
+            self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl")
             self.model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-xl").to(device)
-        elif model_name == "unified-qa":
-            self.tokenizer = T5Tokenizer.from_pretrained("allenai/unifiedqa-t5-large")
-            self.model = T5ForConditionalGeneration.from_pretrained("allenai/unifiedqa-t5-large").to(device)
-        elif model_name[:12] == "unifiedqa-v2":
-            self.tokenizer = T5Tokenizer.from_pretrained(f"allenai/{model_name}-1251000")
-            self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}-1251000").to(device)
-
-        elif model_name in ["macaw-3b","macaw-large","macaw-11b"]:
-            self.tokenizer = T5Tokenizer.from_pretrained(f"allenai/{model_name}", model_max_length=512)
-            #self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}").to(device)
-            self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}", device_map='balanced_low_0')
-
-
-    def calibrate(self, beam_size, restrict_ans= ["Yes","No"], max_len = 2, calib_prompt="Yes or No?"):
-        if self.config.task_name in ['coref']:
-            def restrict_decode_vocab(batch_idx, prefix_beam):
-                return self.tokenizer(restrict_ans, add_special_tokens=True, return_tensors="pt", is_split_into_words=True)['input_ids'].tolist()
-       
-            calib_out = self.model.generate(self.tokenizer(calib_prompt, return_tensors="pt").input_ids.to(device), num_return_sequences=beam_size, num_beams=beam_size, output_scores=True, return_dict_in_generate=True, prefix_allowed_tokens_fn= restrict_decode_vocab, max_length=max_len)
-            gens = []
-            ans_scores= []
-            ans_order = []
-            val_answers = restrict_ans.copy()
-            for seq_ix in range(beam_size):
-                seq_dict = {}
-                seq_dict["sentence"] = self.tokenizer.decode(calib_out.sequences[seq_ix], skip_special_tokens=True).replace(",", " ,")
-                seq_dict["score"] = calib_out.sequences_scores[seq_ix].item()
-                if seq_dict["sentence"] in val_answers:
-                    ans_order.append(seq_dict["sentence"])
-                    ans_scores.append(seq_dict["score"])
-                    val_answers.remove(seq_dict["sentence"])
-                    
-                gens.append(seq_dict)
-        
-
-            if self.config.calibration_type == "calib_before_use": 
-                p_cf = 1/torch.softmax(torch.Tensor(ans_scores),0)
-            elif self.config.calibration_type == "pmi":
-                p_cf = torch.softmax(torch.Tensor(ans_scores),0) 
-            elif self.config.calibration_type == "score_diff":
-                offset = 0 
-                if "Yes" in restrict_ans:
-                    for aix, a in enumerate(ans_order):
-                        if a == "Yes":
-                            offset += ans_scores[aix]
-                        elif a == "No":
-                            offset -= ans_scores[aix]
-                
-                p_cf = offset
-                ans_order = restrict_ans
-            
-            return p_cf, ans_order
         else:
-            return None, None
+            raise ValueError("Only Flan models supported for iterative prompting experiments")
 
 
 
+    def generate_prompts_itr(self, pr_type):
+        """ Construct prompt for all the sentences in the dataset
+        Inputs
+        ---------------
+        pr_type: str. Values in {"wo_ans_string", "with_ans_string"}. If set to "with_ans_string", prompt
+                    will have empty slots for future answers which can be filled in the generation phase. These
+                    answers can be used to ask the model to avoid overlapping answers. 
 
-    def generate_prompts_cot(self, pr_type):
+        Outputs
+        --------------
+        prompts: List[str]. List of prompts input to the model
+        gold: List[str]. List of gold answers. Parallel list to `prompts`
+
+        """
         prompts = []
         gold = []
         predicate = None
@@ -148,18 +78,19 @@ class PromptModel():
         if self.config.task_name in ["srl"]:
             pred_questions = []
             for ix, row in self.data.iterrows():
+                # Intializing running parameters 
                 if predicate == None:
                     predicate = row['predicate']
                     sent_id = row["sent_id"]
                     sentence = row["sentence"]
-
+                # Marking the end of the structure and updating the running parameters
                 if (predicate != row["predicate"]) or (sent_id != row["sent_id"]):
                     predicate = row['predicate']
                     sent_id = row["sent_id"]
                     sentence = row["sentence"]
                     pred_questions = []
 
-                pr = construct_cot_prompt_srl(row["sentence"], row["question"], pred_questions, pr_type)
+                pr = construct_itr_prompt_srl(row["sentence"], row["question"], pred_questions, pr_type)
                 prompts.append(pr)
                 gold.append(row["answer"]) 
                 pred_questions.append(row['question'])
@@ -175,7 +106,7 @@ class PromptModel():
                     sentence = row["sentence"]
                     pred_questions = []
 
-                pr = construct_cot_prompt_coref(row["sentence"], row["entity1"], row["entity2"], pred_questions)
+                pr = construct_itr_prompt_coref(row["sentence"], row["entity1"], row["entity2"], pred_questions)
                 prompts.append(pr)
                 gold.append(row["answer"]) 
                 pred_questions.append([row["entity1"], row["entity2"]])
@@ -183,12 +114,20 @@ class PromptModel():
         return prompts, gold
 
 
+
     def generate(self, beam_size=1, test_mode=False):
         """ Method to prepare prompts and generate.
+        Outputs
+        ============
+        prompts: List[str]. List of prompts input to the model
+        gold: List[str]. List of gold answers. Parallel list to `prompts`
+        generation: List[List[dict]]. Contains the outputs generated from the model. Each outer list element
+                    corresponds to a list of answers for a prompt. The inner list is arranged in descending
+                    order of score. Each list element is a dictionary with the keys "sentence" that contains 
+                    a candidate answer string as value, and "score" contain the sequence score for that answer
         """
         pr_type = "wo_ans_string"
-        prompts, gold = self.generate_prompts_cot(pr_type)    # Generate prompts and their answers)    
-        #do_calibrate = self.config.do_calibrate
+        prompts, gold = self.generate_prompts_itr(pr_type)    # Generate prompts and their answers)    
         generation = [] # The list contains all the generation from the model
 
         ####### Paramters for generation
@@ -201,23 +140,20 @@ class PromptModel():
 
         if restriction != None:
             calib_order = restriction.copy()
-        # Calibrate if you have a restricted vocabulary
-        #if do_calibrate:
-        #    calib_out, calib_order = self.calibrate(beam_size, restrict_ans=restriction.copy(), max_len=max_len, calib_prompt=calib_prompt)
-        #    print(f"Calibration Answer Order: {calib_order}")
-        #    print(f"Calibration Scores: {calib_out}")
-        
+
 
         # Iterate over prompts
         predicate = None
         pred_answers = []
         for ix, row in tqdm(self.data.iterrows()):
             if self.config.task_name == "srl":
+                # Initializing running parameters for the structure
                 if predicate == None:
                     predicate = row['predicate']
                     sent_id = row["sent_id"]
                     sentence = row["sentence"]
-            
+                # Indicates that a change of structure/predicate; resetting the pred_answeres
+                # and update the running parameters
                 if (predicate != row["predicate"]) or (sent_id != row["sent_id"]):
                     predicate = row['predicate']
                     sent_id = row["sent_id"]
@@ -239,8 +175,7 @@ class PromptModel():
                     prompt = prompt.format(*doub_list)
                 else:
                     prompt = prompt.format(*pred_answers)
-            print(prompt)
-            print()
+        
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
             
             with torch.no_grad():
@@ -309,7 +244,6 @@ class PromptModel():
                     else:
                         prompt_gens.append({"sentence":l1, "score":l2})
                 
-            #generation.append(prompt_gens)
 
             generation.append(prompt_gens)
             pred_answers.append(prompt_gens[0]["sentence"])
@@ -370,10 +304,8 @@ if __name__ == "__main__":
             gens = pickle.load(out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
             gold = pickle.load(out)
-    #plot_score_diff(gold, gens, prefix='uncalib_macaw_')
-    #plot_yes_no(gold, gens, prefix='fulldev')
-    #plot_calibration(gens, gold, filename= "./../figures/cbu_calibplot.pdf")
-     
+   
+
     ######## STEP 2. Running Inference
     if run_inference_module:
         meta= {'thresh': 0.5, "config": model.config}
@@ -383,20 +315,6 @@ if __name__ == "__main__":
     else:
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_consans.bin","rb") as out:
             const_ans = pickle.load(out)
-    #analyse_beams(gold, gens, root_analysis=True)
-    
-
-    #### Code to run Macaw-11B predictions
-    #data = pd.read_csv("./../dumps/ecbp_dev_ques_macaw_predictions.csv")
-    #uncon_gens = []
-    #for pred in data['prediction']:
-    #    if pred == "yes":
-    #        uncon_gens.append("Yes")
-    #    elif pred == "no":
-    #        uncon_gens.append("No")
-    #    else:
-    #        uncon_gens.append("No")
-    #        print("Incorrect")
     
     
     ######### STEP 3. Evaluation
@@ -414,21 +332,16 @@ if __name__ == "__main__":
 
 
     ## Unconstrained Evaluation
-    print("Chain of Thought Verbal constraints")
+    print("Iterative Prompting with Verbal constraints")
     meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_uncons.txt", "constrained":False}
     cot_gens = [gen[0]["sentence"] for gen in gens]   #Taking the top path in the beam
     evaluate(model.data, model.config, cot_gens, meta)
     
-    ## Chain of Thopught
-    print("Chain of Thought: Constrained")
+    ## Iterative Prompting
+    print("Iterative Prompting with Verbal Constraints plus Inference")
     meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_cot.txt", "constrained":False}
     evaluate(model.data, model.config, const_ans, meta)
 
 
 
-    ## Constrained Evaluation
-    #print("Constrained")
-    #meta = {"gold_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_gold.txt", "pred_dump_file": f"./../results/coref/{dataset_name}_{file_infix}_cons.txt", "constrained":True}
-    #evaluate(model.data, model.config, const_ans, meta)
-
-
+  
