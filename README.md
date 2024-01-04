@@ -16,7 +16,7 @@ To get started with the project, follow the steps mentioned below:
   foo@bar:prompts-for-structures$ source activate <venv_name>/bin/activate
   (<venv_name>)foo@bar:prompts-for-structures$
   ```
-3. Create necessary data and dump folders.
+3. Create necessary results and dump folders.
   ```console
   (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p dumps results
   ```
@@ -96,3 +96,8 @@ Run your code using:
 (<venv_name>)foo@bar:prompts-for-structures/src$ python model.py --config_file <config_file_path> 
 ```
 In addition, we have added two flags: `read_generated` and `read_inferences`. When `read_generated` is set, it reads the model generation dumps corresponding to the task, dataset, model and read_spec. When `read_inferences` is set, it reads the post-infernce model dumps corresponding to the task, dataset, model and read_spec. When not set, these steps are executed and the data is dumped in accordance to the dump_spec.
+
+
+---
+### Cite Us
+To be added soon.
