@@ -18,7 +18,7 @@ To get started with the project, follow the steps mentioned below:
   ```
 3. Create necessary data and dump folders.
   ```console
-  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p data dumps
+  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p dumps results
   ```
 4. Install package requirements.
   ```console
@@ -48,6 +48,11 @@ To get started with the project, follow the steps mentioned below:
   ``` console
   (<venv_name>)foo@bar:prompts-for-structures/src$ python model_gpt.py --config_file <config_file_path>
   ```
+6. SRL metrics and inconsistencies for the unconstrained and the constrained systems will be printed on running the commands mentioned above. However, for coreference experiments only F1 and inconsistencies will be printed. To obtain the CoNLL scores, you must find three files in the `results/` directory with the relevant prefix given in the config file and the suffixes `gold`, `uncons`, and `cons` respectively. These contain the gold clusters, clusters post constrained with R2L inference, and clusters post All-link inference. To compute the CoNLL scores, as an instance, for the All-link constrained clusters you may run:
+ ``` console
+  (<venv_name>)foo@bar:prompts-for-structures/src$ perl ./reference-coreference-scorers/scorer.pl all <path_to_gold_file> <path_to_cons_file>
+  ```
+
 
 Each config file pertains to a single experiment. In addition, we have added two flags: `read_generated` and `read_inferences`. When `read_generated` is set, it reads the model generation dumps corresponding to the task, dataset, model and read_spec. When `read_inferences` is set, it reads the post-infernce model dumps corresponding to the task, dataset, model and read_spec. When not set, these steps are executed and the data is dumped according to the dump_spec.
 
