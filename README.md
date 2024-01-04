@@ -42,7 +42,11 @@ To get started with the project, follow the steps mentioned below:
   ``` console
   (<venv_name>)foo@bar:prompts-for-structures/src$ python model.py --config_file <config_file_path>
   ```
-4. Run the GPT-4 experiments in a similar fashion. All the config files for the GPT experiments are located under `config_files/gpt_configs/`:
+4. Similarly., run the iterative prompting experiments. All the config files for the GPT experiments are located under `config_files/itr_configs/`:
+  ``` console
+  (<venv_name>)foo@bar:prompts-for-structures/src$ python model_itr.py --config_file <config_file_path>
+  ```
+5. Run the GPT-4 experiments in a similar fashion. All the config files for the GPT experiments are located under `config_files/gpt_configs/`:
   ``` console
   (<venv_name>)foo@bar:prompts-for-structures/src$ python model_gpt.py --config_file <config_file_path>
   ```
