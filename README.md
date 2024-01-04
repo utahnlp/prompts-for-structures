@@ -35,7 +35,7 @@ To get started with the project, follow the steps mentioned below:
  
 ## Running Existing Experiments
 1. The required data can be downloaded from this [link](https://drive.google.com/file/d/1-xF1UFClkNdQti0bnKoKPQDyL3OOn1tH/view?usp=sharing). Extract the data in the project directory.
-2. You just require the config file to run the experiments for a task/dataset. Existing config files are stored in the `config_files/` directory.
+2. You just require the config file to run the experiments for a task/dataset. Existing config files are stored in the `config_files/` directory. More on the usage of these config files are present in the [README](https://github.com/utahnlp/prompts-for-structures/blob/main/config_files/README.md).
 3. Run the zero and few-shot experiments by running the following command:
   ``` console
   (<venv_name>)foo@bar:prompts-for-structures/src$ python model.py --config_file <config_file_path>
