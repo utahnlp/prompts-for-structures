@@ -196,6 +196,7 @@ class SRLExtractor(torch.nn.Module):
 def add_parser_args(parser):
     parser.add_argument('--dataset_name', default= "wiki", type=str, choice=['wiki','qasrl2'])
     parser.add_argument('--mode', default="train", type=str, choices=['train','test'])
+    parser.add_argument('--best_model', default = 1, type=int)
     parser.add_argument('--read_generated', action='store_true')
     parser.add_argument('--read_inferences', action='store_true')
     return parser
@@ -237,7 +238,7 @@ if __name__ == "__main__":
         elif split == "test":
             eval_df = srl_model.test_df
         
-        model_path = model_dir + "1"
+        model_path = model_dir + str(args['best_model'])
         
         eval_prompts, eval_labs = srl_model.process_eval_prompts(eval_df)
         eval_dataset = SRLDataset(eval_prompts, eval_labs)
