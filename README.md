@@ -59,6 +59,8 @@ Each config file pertains to a single experiment. In addition, we have added two
 ### Hardware and Time
 Most of the zero-shot experiments with sub-3 billion and equivalent models were run on an NVIDIA TITAN RTX machine (24 GB VRAM). A few 3-billion experiments were also run on an NVIDIA A40 GPU (40 GB VRAM). All 11 billion experiments and fine-tuning experiments were performed on an NVIDIA (80 GB VRAM). Benchmarks on generation and inference times are given in the paper appendix.
 
+7. Head on to the [`src/supervised_models/`](https://github.com/utahnlp/prompts-for-structures/tree/main/src/supervised_models) directory for information about running the supervised model experiments.
+
 
 ---
 ## Adding your Experiments
