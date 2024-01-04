@@ -3,7 +3,6 @@
 This project deals with the idea of using prompts for structured prediction tasks. The idea is to break a structured prediction tasks into independent components which can be queried to a language model using prompts. Following this, inference algorithms are used to enforce structural constraints for the structured prediction task in question.
 
 ## Getting Started 
----
 Supported Python Version: 3.8+<br>
 To get started with the project, follow the steps mentioned below:
 1. Clone the repository to your local working directory.
@@ -35,7 +34,6 @@ To get started with the project, follow the steps mentioned below:
   ```
  
 ## Running Existing Experiments
----
 1. The required data can be downloaded from this [link](https://drive.google.com/file/d/1-xF1UFClkNdQti0bnKoKPQDyL3OOn1tH/view?usp=sharing). Extract the data in the project directory.
 2. You just require the config file to run the experiments for a task/dataset. Existing config files are stored in the `config_files/` directory.
 3. Run the zero and few-shot experiments by running the following command:
@@ -53,11 +51,13 @@ To get started with the project, follow the steps mentioned below:
 
 Each config file pertains to a single experiment. In addition, we have added two flags: `read_generated` and `read_inferences`. When `read_generated` is set, it reads the model generation dumps corresponding to the task, dataset, model and read_spec. When `read_inferences` is set, it reads the post-infernce model dumps corresponding to the task, dataset, model and read_spec. When not set, these steps are executed and the data is dumped according to the dump_spec.
 
+### Hardware and Time
+Most of the zero-shot experiments with sub-3 billion and equivalent models were run on an NVIDIA TITAN RTX machine (24 GB VRAM). A few 3-billion experiments were also run on an NVIDIA A40 GPU (40 GB VRAM). All 11 billion experiments and fine-tuning experiments were performed on an NVIDIA (80 GB VRAM). Benchmarks on generation and inference times are given in the paper appendix.
 
 
-
-## Adding your Experiments
 ---
+## Adding your Experiments
+
 The codebase follows a centralized generation and inference pipeline. There are two facets to adding your task/dataset to the codebase: a) config file, and b) Ad-hoc code.
 ### Config File
 The config file is the only input the system. The parameters in the file fixes the experimental setting. These parameters are explained briefly here:
