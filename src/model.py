@@ -15,14 +15,12 @@ import torch
 from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from typing import Union
+import time
 
-GPU_ID = "0"
+GPU_ID = "1"
 device = torch.device(f"cuda:{GPU_ID}" if torch.cuda.is_available() else "cpu")
 #device = "cpu"
 torch.manual_seed(2121)
-
-#problematic_ix = [709,710,711,1219,1220,1221,1502,1503,2694,2695,2696,2697,2921,2922,2923,3263,3264,3265,3266,3267,3390,3405,3406,3459,3460,4214,4215,4216,4508,4509,4510]
-#problematic_ix = [4145,4146,4147,4457,4458,4459,4460,5856,5857,5858,5926,5927,5928]
 
 
 class PromptModel():
@@ -44,12 +42,7 @@ class PromptModel():
                 )
         
         print(f"Total number of queries: {len(self.data)}")
-        #ids = 21
-        #print(self.data["sentence"].iloc[ids])
-        #print(self.data["entity1"].iloc[ids])
-        #print(self.data["entity2"].iloc[ids])
-        #print(self.data["answer"].iloc[ids])
-         
+        
         self.init_model(self.config.model)
 
 
@@ -85,8 +78,8 @@ class PromptModel():
 
         elif model_name in ["macaw-3b","macaw-large","macaw-11b"]:
             self.tokenizer = T5Tokenizer.from_pretrained(f"allenai/{model_name}", model_max_length=512)
-            #self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}").to(device)
-            self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}", device_map='balanced_low_0')
+            self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}").to(device)
+            #self.model = T5ForConditionalGeneration.from_pretrained(f"allenai/{model_name}", device_map='balanced_low_0')
 
 
     def calibrate(self, beam_size, restrict_ans= ["Yes","No"], max_len = 2, calib_prompt="Yes or No?"):
@@ -265,12 +258,6 @@ class PromptModel():
 
         if condition_prob:
             c_prob_std.append(np.std(priors))
-        
-        #print(f"Mean of standard deviation of priors: {np.mean(c_prob_std)}")
-        #print(f"Std dev of standard deviation of priors: {np.std(c_prob_std)}")
-        #print(f"Max standard deviation of priors: {np.max(c_prob_std)}\n")
-
-
 
         return prompts, gold, generation
 
@@ -326,34 +313,22 @@ if __name__ == "__main__":
             gens = pickle.load(out)
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_gold","rb") as out:
             gold = pickle.load(out)
-    #plot_score_diff(gold, gens, prefix='uncalib_macaw_')
-    #plot_yes_no(gold, gens, prefix='fulldev')
-    #plot_calibration(gens, gold, filename= "./../figures/cbu_calibplot.pdf")
-     
+    
     ######## STEP 2. Running Inference
     if run_inference_module:
         meta= {'thresh': 0.5, "config": model.config}
+        start = time.time()
         const_ans = model.constrained_inference(gens, sanity_check=False, meta= meta)
+        end = time.time()
+        print(f"Inference time: {end-start}")
+        exit()
         with open(f"./../dumps/{dataset_name}_{task_name}_{file_infix}_consans.bin","wb") as out:
             pickle.dump(const_ans, out)
     else:
         with open(f"./../dumps/{dataset_name}_{task_name}_{read_file_infix}_consans.bin","rb") as out:
-            const_ans = pickle.load(out)
-    #analyse_beams(gold, gens, root_analysis=True)
-    
+            const_ans = pickle.load(out)   
 
-    #### Code to run Macaw-11B predictions
-    #data = pd.read_csv("./../dumps/ecbp_dev_ques_macaw_predictions.csv")
-    #uncon_gens = []
-    #for pred in data['prediction']:
-    #    if pred == "yes":
-    #        uncon_gens.append("Yes")
-    #    elif pred == "no":
-    #        uncon_gens.append("No")
-    #    else:
-    #        uncon_gens.append("No")
-    #        print("Incorrect")
-    
+   
     
     ######### STEP 3. Evaluation
     if config.task_name == "coref":
