@@ -193,21 +193,39 @@ class SRLExtractor(torch.nn.Module):
 
 
 
-if __name__ == "__main__":
-    dataset_name = "wiki"
-    mode = "test"
+def add_parser_args(parser):
+    parser.add_argument('--dataset_name', default= "wiki", type=str, choice=['wiki','qasrl2'])
+    parser.add_argument('--mode', default="train", type=str, choices=['train','test'])
+    parser.add_argument('--read_generated', action='store_true')
+    parser.add_argument('--read_inferences', action='store_true')
+    return parser
+
+
+
+
+if __name__ == "__main__": 
+    parser = argparse.ArgumentParser()
+    parser = add_parser_args(parser)
+    args = vars(parser.parse_args())
+ 
+
+    dataset_name = args["dataset_name"]
+    mode = args["mode"]
+    run_generate = not args['read_generated']
+    run_inferences = not args['read_inferences']
+    
     DATA_DIR =  "../../data/"
-    run_generate = True
-    run_inferences = True
 
-    train_file = DATA_DIR + "wiki1.train.qa"
-    dev_file = DATA_DIR + "wiki1.dev.qa"
-    test_file = DATA_DIR + "wiki1.test.qa"
-    #train_file = DATA_DIR + "qasrl-v2/orig/train.jsonl"
-    #dev_file   = DATA_DIR + "qasrl-v2/orig/dev.jsonl"
-    #test_file = DATA_DIR + "qasrl-v2/orig/test.jsonl"
+    if dataset_name == "wiki": 
+        train_file = DATA_DIR + "wiki1.train.qa"
+        dev_file = DATA_DIR + "wiki1.dev.qa"
+        test_file = DATA_DIR + "wiki1.test.qa"
+    elif dataset_name == "qasrl2":
+        train_file = DATA_DIR + "qasrl-v2/orig/train.jsonl"
+        dev_file   = DATA_DIR + "qasrl-v2/orig/dev.jsonl"
+        test_file = DATA_DIR + "qasrl-v2/orig/test.jsonl"
 
-    model_dir = f"/scratch/general/nfs1/u1201309/prompts/models/sup_baseline/srl/{dataset_name}/{SEED}/"
+    model_dir = f"../../models/sup_baseline/srl/{dataset_name}/{SEED}/"
 
     srl_model = SRLExtractor(train_file, dev_file, test_file, dataset_name)
     if mode == "train":

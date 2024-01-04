@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import pickle
 from pathlib import Path
@@ -244,26 +245,42 @@ class CorefClassifier(torch.nn.Module):
         return generations
 
 
+def add_parser_args(parser):
+    parser.add_argument('--dataset_name', default= "ecbp", type=str, choices=['ecbp','ontonotes','genia'])
+    parser.add_argument('--mode', default="train", type=str, choices=['train','test'])
+    parser.add_argument('--read_generated', action='store_true')
+    parser.add_argument('--read_inferences', action='store_true')
+    return parser
+
+
+
 if __name__ == "__main__":
-    dataset_name = "ecbp"
-    mode = "test"
-    run_generate = True
-    run_inferences = True
 
-    DATA_DIR =  "../../data/awesomecoref/processed_ecb/data/ecb/gold_singletons/" 
-    train_file = DATA_DIR + "train_entities_corpus_level.conll"
-    dev_file   = DATA_DIR + "dev_entities_corpus_level.conll"
-    test_file = DATA_DIR + "test_entities_corpus_level.conll"
+    parser = argparse.ArgumentParser()
+    parser = add_parser_args(parser)
+    args = vars(parser.parse_args())
+ 
 
-    #DATA_DIR =  "/scratch/general/nfs1/u1201309/prompts/data/conll-2012/v12/data/{}/data/english/annotations/" 
-    #train_file = DATA_DIR.format("train")
-    #dev_file = DATA_DIR.format("development")
-    #test_file = DATA_DIR.format("test")  
+    dataset_name = args["dataset_name"]
+    mode = args["mode"]
+    run_generate = not args['read_generated']
+    run_inferences = not args['read_inferences']
 
-    #DATA_DIR =  "../../data/GENIA_MedCo_coreference_corpus_1.0/{}" 
-    #train_file = DATA_DIR.format("train")
-    #dev_file = DATA_DIR.format("dev")
-    #test_file = DATA_DIR.format("test")  
+    if dataset_name == "ecbp":
+        DATA_DIR =  "../../data/awesomecoref/processed_ecb/data/ecb/gold_singletons/" 
+        train_file = DATA_DIR + "train_entities_corpus_level.conll"
+        dev_file   = DATA_DIR + "dev_entities_corpus_level.conll"
+        test_file = DATA_DIR + "test_entities_corpus_level.conll"
+    elif dataset_name == "ontonotes":
+        DATA_DIR =  "../../data/conll-2012/v12/data/{}/data/english/annotations/" 
+        train_file = DATA_DIR.format("train")
+        dev_file = DATA_DIR.format("development")
+        test_file = DATA_DIR.format("test")  
+    elif dataset_name == "genia":
+        DATA_DIR =  "../../data/GENIA_MedCo_coreference_corpus_1.0/{}" 
+        train_file = DATA_DIR.format("train")
+        dev_file = DATA_DIR.format("dev")
+        test_file = DATA_DIR.format("test")  
 
 
 
