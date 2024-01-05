@@ -5,17 +5,18 @@ from tqdm import tqdm
 from typing import Union, List
 
 
-def solve_coref(relations, preds, thresh=0.5):
-    thresh = 0.5
+def solve_coref(relations, pred_scores, thresh=0.5):
     max_ent = np.max(relations)+1
     score_mat = np.full((max_ent,max_ent),-np.inf)
-    for ix in range(len(preds)):
-        for p in preds[ix]:
-            if p['sentence'] == "Yes":
-                score_y = p['score']
+    assert len(relations) == len(pred_scores)
+    for ix in range(len(pred_scores)):
+        score_mat[relations[ix][0],relations[ix][1]] = pred_scores[ix]
 
-        score_mat[relations[ix][0],relations[ix][1]] = score_y-thresh
-
+    # Fill all missing values with zero
+    for ix1 in range(max_ent):
+        for ix2 in range(ix1+1,max_ent):
+            if score_mat[ix1,ix2] == -np.inf:
+                score_mat[ix1,ix2] = 0
 
     model = Model('Optim')
 
@@ -62,8 +63,34 @@ def solve_coref(relations, preds, thresh=0.5):
 
 
 
+def get_scores(generation, meta):
+    """ Compute the scores for the inference algorithm based on the geenration score
+    Inputs
+    ------------------
+    generation: dict. The generation dictionary from the generation system. Contains two keys
+                "sentence" and "score".
+    meta: dict. Meta dictionary passed during inference
+    """
+    score_y=0
+    if meta["config"].score_type  == "prob":
+        for p in generation:
+            if p['sentence'] == "Yes":
+                score_y = p['score'] - meta["thresh"]
+    if meta["config"].score_type == "raw":
+        score_y  = 0
+        for p in generation:
+            if p["sentence"] == "Yes":
+                score_y += p['score']
+            elif p["sentence"] == "No":
+                score_y -= p['score']
 
-def inference_coref(data, generations, sanity_check):
+    return score_y
+ 
+
+
+
+
+def inference_coref(data, generations, sanity_check, meta):
     """ Constrained inference for the SRL task
     Inputs
     ------------
@@ -77,6 +104,7 @@ def inference_coref(data, generations, sanity_check):
     structure_ix = None
     doc_id = None
     pred_gens = []
+    pred_scores = []
     const_ans = []
     gold_ans = []
     relation_ids = []
@@ -85,29 +113,28 @@ def inference_coref(data, generations, sanity_check):
         if structure_ix == None:
             structure_ix = ix
             doc_id = row['doc_id']
-        #if ix ==3:
-        #    print(row.keys())
-        #    print(row)
-        #    exit()
+        
         # When the doc_id changes, we need to consider the data we have
         # for constrained inference
         if doc_id != row['doc_id']:
-            struct_ans = solve_coref(relation_ids, pred_gens)
+            struct_ans = solve_coref(relation_ids, pred_scores, meta['thresh'])
             const_ans.extend(struct_ans)
              
             pred_gens = []
+            pred_scores = []
             gold_ans = []
             relation_ids = []
             doc_id = row['doc_id']
 
         pred_gens.append(generations[ix])
+        pred_scores.append(get_scores(generations[ix], meta))
         gold_ans.append(row["answer"])
         if row['in_order']:
             relation_ids.append([row['mention_id1'],row["mention_id2"]])
         else:
             relation_ids.append([row["mention_id2"],row["mention_id1"]])
     
-    struct_ans = solve_coref(relation_ids, pred_gens)
+    struct_ans = solve_coref(relation_ids, pred_scores)
     const_ans.extend(struct_ans)
 
         

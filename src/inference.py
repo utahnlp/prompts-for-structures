@@ -17,7 +17,7 @@ INFERENCE_DICT = {
         }
 
 
-def run_inference(task: str, data: pd.DataFrame, generations: List[List[dict]], sanity: bool) -> List[str]:
+def run_inference(task: str, data: pd.DataFrame, generations: List[List[dict]], sanity: bool, meta: dict = None) -> List[str]:
     """ Nodal method for computing inference. This implies that the input and output
     data types should be fixed.
     Inputs
@@ -29,9 +29,10 @@ def run_inference(task: str, data: pd.DataFrame, generations: List[List[dict]], 
             of all the paths in the generation beam in descending order of score/probability. Each 
             path contains a its corresponding sentence and score.
     sanity: bool. If True, gold answers are taken to check for perfect inference. 
+    meta: dict. Additional dictionary to pass ad-hoc parameters.
 
     Outputs
     ------------------------
     const_ans: List[str]. List of answers corresponding to the prompts after applying the inference.
     """
-    return INFERENCE_DICT[task](data, generations, sanity)
+    return INFERENCE_DICT[task](data, generations, sanity, meta)

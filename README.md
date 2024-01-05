@@ -1,8 +1,8 @@
-# Prompts for Structures
+![Promptly Predicting Structures](https://github.com/utahnlp/prompts-for-structures/blob/dev_basline/logo.png)
+
 This project deals with the idea of using prompts for structured prediction tasks. The idea is to break a structured prediction tasks into independent components which can be queried to a language model using prompts. Following this, inference algorithms are used to enforce structural constraints for the structured prediction task in question.
 
 ## Getting Started 
----
 Supported Python Version: 3.8+<br>
 To get started with the project, follow the steps mentioned below:
 1. Clone the repository to your local working directory.
@@ -16,9 +16,9 @@ To get started with the project, follow the steps mentioned below:
   foo@bar:prompts-for-structures$ source activate <venv_name>/bin/activate
   (<venv_name>)foo@bar:prompts-for-structures$
   ```
-3. Create necessary data and dump folders.
+3. Create necessary results and dump folders.
   ```console
-  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p data, dumps
+  (<venv_name>)foo@bar:prompts-for-structures$ mkdir -p dumps results
   ```
 4. Install package requirements.
   ```console
@@ -28,18 +28,44 @@ To get started with the project, follow the steps mentioned below:
   ```console
   (<venv_name>)foo@bar:prompts-for-structures$ pip install gurobipy
   ```
+6. Clone the official CoNLL coreference scorer library:
+  ```console
+  (<venv_name>)foo@bar:prompts-for-structures$ git clone https://github.com/conll/reference-coreference-scorers.git
+  ```
  
 ## Running Existing Experiments
----
-1. To obtain the required data, please contact the authors of the repo: maitrey.mehta@utah.edu
-2. You just require the config file to run the experiments for a task/dataset. Existing config files are stored in the `config_files/` directory.
-3. Run the experiment by running the following command:
+1. The required data can be downloaded from this [link](https://drive.google.com/file/d/1-xF1UFClkNdQti0bnKoKPQDyL3OOn1tH/view?usp=sharing). Extract the data in the project directory.
+2. You just require the config file to run the experiments for a task/dataset. Existing config files are stored in the `config_files/` directory. More on the usage of these config files are present in the [README](https://github.com/utahnlp/prompts-for-structures/blob/main/config_files/README.md).
+3. Run the zero and few-shot experiments by running the following command:
   ``` console
   (<venv_name>)foo@bar:prompts-for-structures/src$ python model.py --config_file <config_file_path>
   ```
+4. Similarly., run the iterative prompting experiments. All the config files for the GPT experiments are located under `config_files/itr_configs/`:
+  ``` console
+  (<venv_name>)foo@bar:prompts-for-structures/src$ python model_itr.py --config_file <config_file_path>
+  ```
+5. Run the GPT-4 experiments in a similar fashion. All the config files for the GPT experiments are located under `config_files/gpt_configs/`:
+  ``` console
+  (<venv_name>)foo@bar:prompts-for-structures/src$ python model_gpt.py --config_file <config_file_path>
+  ```
+6. SRL metrics and inconsistencies for the unconstrained and the constrained systems will be printed on running the commands mentioned above. However, for coreference experiments only F1 and inconsistencies will be printed. To obtain the CoNLL scores, you must find three files in the `results/` directory with the relevant prefix given in the config file and the suffixes `gold`, `uncons`, and `cons` respectively. These contain the gold clusters, clusters post constrained with R2L inference, and clusters post All-link inference. To compute the CoNLL scores, as an instance, for the All-link constrained clusters you may run:
+ ``` console
+  (<venv_name>)foo@bar:prompts-for-structures/src$ perl ./reference-coreference-scorers/scorer.pl all <path_to_gold_file> <path_to_cons_file>
+  ```
 
-## Adding your Experiments
+7. Head on to the [`src/supervised_models/`](https://github.com/utahnlp/prompts-for-structures/tree/main/src/supervised_models) directory for information about running the supervised model experiments.
+
+
+Each config file pertains to a single experiment. In addition, we have added two flags: `read_generated` and `read_inferences`. When `read_generated` is set, it reads the model generation dumps corresponding to the task, dataset, model and read_spec. When `read_inferences` is set, it reads the post-infernce model dumps corresponding to the task, dataset, model and read_spec. When not set, these steps are executed and the data is dumped according to the dump_spec.
+
+### Hardware and Time
+Most of the zero-shot experiments with sub-3 billion and equivalent models were run on an NVIDIA TITAN RTX machine (24 GB VRAM). A few 3-billion experiments were also run on an NVIDIA A40 GPU (40 GB VRAM). All 11 billion experiments and fine-tuning experiments were performed on an NVIDIA (80 GB VRAM). Benchmarks on generation and inference times are given in the paper appendix.
+
+
+
 ---
+## Adding your Experiments
+
 The codebase follows a centralized generation and inference pipeline. There are two facets to adding your task/dataset to the codebase: a) config file, and b) Ad-hoc code.
 ### Config File
 The config file is the only input the system. The parameters in the file fixes the experimental setting. These parameters are explained briefly here:
@@ -73,3 +99,8 @@ Run your code using:
 (<venv_name>)foo@bar:prompts-for-structures/src$ python model.py --config_file <config_file_path> 
 ```
 In addition, we have added two flags: `read_generated` and `read_inferences`. When `read_generated` is set, it reads the model generation dumps corresponding to the task, dataset, model and read_spec. When `read_inferences` is set, it reads the post-infernce model dumps corresponding to the task, dataset, model and read_spec. When not set, these steps are executed and the data is dumped in accordance to the dump_spec.
+
+
+---
+### Cite Us
+To be added soon.

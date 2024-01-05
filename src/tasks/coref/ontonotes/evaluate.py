@@ -8,6 +8,7 @@ from graph import get_all_cliques
 from utils import right_to_left_search, Config, get_modified_ans, check_violations
 
 
+
 def get_cluster(clusters, ent_id):
     for c_ix, clus in enumerate(clusters):
         if ent_id in clus:
@@ -20,7 +21,12 @@ def create_coref_dumps(rel_rows, gold_clus, pred_clus, g_base_id, p_base_id, gol
     gold_ent_tags = []
     pred_ent_tags = []
     mention_traversed = []
-    
+   
+    with open(gold_dump, "a+") as f:
+        f.write(f"""#begin document ({rel_rows[0]['doc_id']});\n""")
+    with open(pred_dump, "a+") as f:
+        f.write(f"""#begin document ({rel_rows[0]['doc_id']});\n""")
+
 
     for row in rel_rows:
         doc_id = row['doc_id']
@@ -84,16 +90,17 @@ def create_coref_dumps(rel_rows, gold_clus, pred_clus, g_base_id, p_base_id, gol
 
     with open(gold_dump, "a+") as f:
         f.write(f"""\n""")
+        f.write("#end document\n")
     with open(pred_dump, "a+") as f:
         f.write(f"""\n""")
-
+        f.write("#end document\n")
 
 
     return g_base_id+len(gold_clus), p_base_id+len(pred_clus)
 
        
 
-def eval_ecbplus(data, preds, meta):
+def eval_ontonotes(data, preds, meta):
     """ Evaluate Coref dataset
     """
     doc = None
@@ -101,9 +108,9 @@ def eval_ecbplus(data, preds, meta):
     gold_relation_ids = []
     pred_relation_ids = []
     pred_relation_ids_no = []
+
     all_relation_ids = []
     post_inf_ans = []
-    #s_check_gold= []
     rel_rows = []
     max_nodes = 0
 
@@ -111,39 +118,58 @@ def eval_ecbplus(data, preds, meta):
     pred_base_id = 0
 
     with open(meta['gold_dump_file'], "w+") as f:
-        f.write("#begin document (Coref);\n")
+        f.write("")
+        #f.write("#begin document (Coref);\n")
     with open(meta['pred_dump_file'], "w+") as f:
-        f.write("#begin document (Coref);\n")
+        f.write("")
+        #f.write("#begin document (Coref);\n")
 
     g_viol = 0
     p_viol = 0
     num_transitivity = 0
+    
+    debug_flag = False
 
     for ix, row in data.iterrows():
+        #if meta["constrained"] and meta["pred_dump_file"][-6:] == "ns.txt" and not debug_flag:
+        #    if int(row["doc_id"]) != 1334806:
+        #        continue
+        #    else:
+        #        debug_flag = True
+        
         if doc == None:
             doc = row["doc_id"]
+
+
         # Change in doc_id implies a new structure
         if doc != row["doc_id"]:
             #if meta["constrained"]:
             #    gold_clus, gold_violations = get_all_cliques(gold_relation_ids, max_nodes)
             #    pred_clus, pred_violations = get_all_cliques(pred_relation_ids, max_nodes)
-            #else:
-            gold_clus, gold_violations = right_to_left_search(gold_relation_ids, max_nodes)
-            pred_clus, _ = right_to_left_search(pred_relation_ids, max_nodes)
+        
+            gold_clus, gold_violations  = right_to_left_search(gold_relation_ids, max_nodes)
+            pred_clus, _  = right_to_left_search(pred_relation_ids, max_nodes)
             
             pred_violations, total_checks = check_violations(pred_relation_ids, pred_relation_ids_no, max_nodes)
 
             g_viol += gold_violations
             p_viol += pred_violations
+            #if meta["constrained"]:
+            #    try:
+            #        assert p_viol == 0
+            #    except AssertionError:
+            #        print(pred_relation_ids)
+            #        print(pred_relation_ids_no)
+            #        print(doc)
+            #        print(p_viol)
+            #        exit()
+        
+
             num_transitivity += total_checks
-            #num_transitivity += (max_nodes)*(max_nodes-1)*(max_nodes-2)
-            #print("Pred")
-            modified_ans = get_modified_ans(pred_clus, all_relation_ids)
-            post_inf_ans.extend(modified_ans)
-            #print("gold")
-            #s_c = get_modified_ans(gold_clus, all_relation_ids)
-            #s_check_gold.extend(s_c)
-            
+            if not meta['constrained']:
+                modified_ans = get_modified_ans(pred_clus, all_relation_ids)
+                post_inf_ans.extend(modified_ans)
+
             gold_base_id, pred_base_id = create_coref_dumps(rel_rows, gold_clus, pred_clus, gold_base_id, pred_base_id, meta['gold_dump_file'], meta['pred_dump_file'])
 
             # Refresh List
@@ -151,7 +177,6 @@ def eval_ecbplus(data, preds, meta):
             pred_relation_ids = []
             pred_relation_ids_no = []
             all_relation_ids = []
-
             doc = row["doc_id"]
             max_nodes = 0
             rel_rows = []
@@ -160,16 +185,18 @@ def eval_ecbplus(data, preds, meta):
         max_nodes = max(max_nodes, row["mention_id1"]+1, row["mention_id2"]+1)
         rel_rows.append(row)
         # Curate edges to form the clusters ultimately
-
+        
         if row['answer'] == 'Yes':
             gold_relation_ids.append([row['mention_id1'], row["mention_id2"]])
         if preds[ix] == 'Yes':
             pred_relation_ids.append([row['mention_id1'], row["mention_id2"]])
         elif preds[ix] == 'No':
             pred_relation_ids_no.append([row['mention_id1'], row["mention_id2"]])
+
         all_relation_ids.append([row['mention_id1'], row["mention_id2"]])
-   
-    
+
+
+    # For the last document
     gold_clus, gold_violations = right_to_left_search(gold_relation_ids, max_nodes)
     pred_clus, _ = right_to_left_search(pred_relation_ids, max_nodes)
 
@@ -178,13 +205,10 @@ def eval_ecbplus(data, preds, meta):
     g_viol += gold_violations
     p_viol += pred_violations
     num_transitivity += total_checks
-    #num_transitivity += (max_nodes)*(max_nodes-1)*(max_nodes-2)
 
-    modified_ans = get_modified_ans(pred_clus, all_relation_ids)
-    post_inf_ans.extend(modified_ans)
-    #s_c = get_modified_ans(gold_clus, all_relation_ids)
-    #s_check_gold.extend(s_c)
-
+    if not meta['constrained']:
+        modified_ans = get_modified_ans(pred_clus, all_relation_ids)
+        post_inf_ans.extend(modified_ans)
 
     _, _ = create_coref_dumps(rel_rows, gold_clus, pred_clus, gold_base_id, pred_base_id, meta['gold_dump_file'], meta['pred_dump_file'])
 
@@ -192,18 +216,12 @@ def eval_ecbplus(data, preds, meta):
 
     f1 = f1_score(gold_ans, preds, average='macro')
     print(f"F1 Score (Pre-inference): {f1}")
-    f1_post = f1_score(gold_ans, post_inf_ans, average='macro')
-    print(f"F1 Score (Post-inference): {f1_post}")
-    #f1_sc = f1_score(gold_ans, s_check_gold, average='macro')
-    #print(f"Sanity F1 Score: {f1_sc}")
+    if not meta['constrained']:
+        f1_post = f1_score(gold_ans, post_inf_ans, average='macro')
+        print(f"F1 Score (Post-inference): {f1_post}")
     #print(f"Gold Violations: {g_viol}")
-    if not meta["constrained"]:
-        print(f"Transitivity Violations (Predictions): {p_viol}")
+    if not meta['constrained']:
+        print(f"Transitivity Violations (Prediciton): {p_viol}")
         print(f"Total transitivity checks: {num_transitivity}")
-
-    with open(meta['gold_dump_file'], "a") as f:
-        f.write("#end document")
-    with open(meta['pred_dump_file'], "a") as f:
-        f.write("#end document")
 
 

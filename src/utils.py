@@ -31,13 +31,43 @@ class Config():
         self.dataset_name = config.get('Meta','dataset_name')
         self.data_dir = config.get('Data','data_dir')
         self.data_file = config.get('Data','data_file')
+        self.few_shot_file = config.get('Data', 'few_shot_file')
         self.mode = config.get('Run','mode')
+        self.few_shot = self.check_bool(config.get('Run','few_shot'))
+
+        self.num_shots = int(config.get('Few Shot', 'num_shots'))
+        self.shot_type = config.get('Few Shot', 'shot_type')
+        self.shot_seed = int(config.get('Few Shot', 'shot_seed'))
+        self.order_num = int(config.get('Few Shot', 'order_num'))
+
         self.model = config.get('Model','model')
         self.prompt_type = config.get('Prompt','prompt_type')
         self.prompt_style = config.get('Prompt','prompt_style')
         self.context_style = config.get('Prompt', 'context_style')
         self.read_spec = config.get('Dumps', 'read_spec')
         self.spec_det = config.get('Dumps', 'dump_spec')
+        
+        self.do_calibrate = self.check_bool(config.get('Calibration', 'do_calibrate'))
+        
+        self.calibration_type = config.get('Calibration','calibration_type')
+        self.score_type = config.get('Inference','score_type')
+
+        self.consistency_check()
+
+    def check_bool(self, spec):
+        if spec == "True":
+            return True
+        else:
+            return False
+
+
+    def consistency_check(self):
+        if self.calibration_type == "calib_before_use" and self.score_type!="prob":
+            raise Exception(f"""Calibration method {self.calibration_type} is not compatible with the score type {self.score_type}. Please change the score type to "prob" in your config file""")
+        if self.calibration_type == "score_diff" and self.score_type!="raw":
+            raise Exception(f"""Calibration method {self.calibration_type} is not compatible with the score type {self.score_type}. Please change the score type to "raw" in your config file""")
+
+
 
 
 
@@ -61,15 +91,16 @@ def restrict_vocab(config: Config) -> Tuple[ Union[List[str], None], Union[int, 
     calib_prompt = None # Dummy prompt for calibration
 
     if config.task_name in ["coref"]:
-        if config.model in ["t5", "t5-11b", "t5-3b"]:
+        if config.model in ["t5", "t5-11b", "t5-3b","flan-t5-xl"]:
             restriction = ["Yes","No"]
             max_len = 3
             calib_prompt = "question: Yes or No? context: "
-        elif self.config.model in ["macaw-3b"]:
+        elif config.model in ["macaw-3b", "macaw-large","macaw-11b"]:
             restriction = ["$answer$ = Yes", "$answer$ = No"]   # Restriction on vocabulary
             max_len = 10
             calib_prompt = "$answer$ ; $mcoptions$= (A) Yes (B) No ; Yes or No?"
-
+        else:
+            raise "Model not in supported list of models. Please add it in utils.py or use a pre-existing one"
     return restriction, max_len, calib_prompt
 
 
@@ -159,7 +190,7 @@ class ValDict():
         
 
 def get_highlighted_context(row, model, full_context=False):
-    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b']:
+    if model in ['t5','t5-11b','t5-3b','unified-qa','macaw-3b','macaw-large','flan-t5-xl']:
         
         s1 = row['sent1'].copy()
         ent1_ix = row['ent1_ix']
@@ -236,6 +267,25 @@ def right_to_left_search(rel_ids, max_mentions):
     
     clusters = [[0]]
     viol = 0
+    transitivity_viol = 0
+
+    # Computing transivity violations
+    for i in range(1, max_mentions):
+        for j in range(i+1, max_mentions):
+            for k in range(j+1, max_mentions):
+                trans_sum = 0
+                if rel_mat[i][j] == "Y":
+                    trans_sum += 1
+                if rel_mat[j][k] == "Y":
+                    trans_sum += 1
+                if rel_mat[i][k] == "Y":
+                    trans_sum += 1
+                
+                # The transitivity constrint is broken if exactly two 
+                # edges exists between the mentions
+                if trans_sum == 2:
+                    transitivity_viol += 1
+
 
     for i in range(1,max_mentions):
         flag = True
@@ -259,8 +309,87 @@ def right_to_left_search(rel_ids, max_mentions):
         if flag:
             clusters.append([i])
         
+       
+    return clusters, transitivity_viol
+
+
+
+def get_modified_ans(clusters, all_relations):
+    # In case the where there were violations and corrections
+    # were to be made, we need to get the modified answers for the prompts
     
-    return clusters, viol
+    modified_ans = []
+    for rel in all_relations:
+        ent1_clus = None
+        ent2_clus = None
+        for c_ix, clus in enumerate(clusters):
+            if rel[0] in clus:
+                ent1_clus = c_ix 
+                break
+        for c_ix, clus in enumerate(clusters):
+            if rel[1] in clus:
+                ent2_clus = c_ix 
+                break
+
+        assert ent1_clus != None
+        assert ent2_clus != None
+
+        if ent1_clus == ent2_clus:
+            modified_ans.append("Yes")
+        else:
+            modified_ans.append("No")
+    
+    return modified_ans.copy() 
+
+
+
+
+
+
+def check_violations(yes_ids, no_ids, max_mentions):
+    rel_mat = np.full((max_mentions,max_mentions),"N", dtype=str)
+    for rel in yes_ids:
+        low = min(rel)
+        high = max(rel)
+        rel_mat[low][high] = "Y"
+   
+    for rel in no_ids:
+        low = min(rel)
+        high = max(rel)
+        rel_mat[low][high] = "N"
+    
+    
+    transitivity_viol = 0
+    total_checks = 0
+
+    # Computing transivity violations
+    for i in range(1, max_mentions):
+        for j in range(i+1, max_mentions):
+            for k in range(j+1, max_mentions):
+                at_least_two_edges = False 
+                if (rel_mat[i][j] == "Y") and (rel_mat[j][k] == "Y"):
+                    if rel_mat[i][k] != "N/A":
+                        at_least_two_edges = True
+                    if rel_mat[i][k] == "N":
+                        transitivity_viol += 1
+                        #print(i,j,k)
+                elif (rel_mat[i][k] == "Y") and (rel_mat[j][k] == "Y"):
+                    if rel_mat[i][j] != "N/A":
+                        at_least_two_edges = True
+                    if rel_mat[i][j] == "N":
+                        transitivity_viol += 1
+                        #print(i,j,k)
+                elif (rel_mat[i][j] == "Y") and (rel_mat[i][k] == "Y"):
+                    if rel_mat[j][k] != "N/A":
+                        at_least_two_edges = True
+                    if rel_mat[j][k] == "N":
+                        transitivity_viol += 1
+                        #print(i,j,k)
+
+                if at_least_two_edges:
+                    total_checks += 1
+    
+    return transitivity_viol, total_checks
 
 
 

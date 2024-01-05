@@ -1,0 +1,7 @@
+prompt-struct/
+data/
+dumps/
+figures/
+penv3.8/
+./*/.*
+./*/__pycache__/

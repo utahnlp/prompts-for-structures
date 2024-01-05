@@ -7,7 +7,7 @@ from tqdm import tqdm
 from typing import List
 
 
-def inference_srl(data: pd.DataFrame, generations, sanity_check) -> List[str]:
+def inference_srl(data: pd.DataFrame, generations, sanity_check, meta) -> List[str]:
     """ Constrained inference for the SRL task
     Inputs
     ------------
