@@ -103,4 +103,13 @@ In addition, we have added two flags: `read_generated` and `read_inferences`. Wh
 
 ---
 ### Cite Us
-To be added soon.
+```bibtex
+@misc{mehta2024promptly,
+      title={Promptly Predicting Structures: The Return of Inference}, 
+      author={Maitrey Mehta and Valentina Pyatkin and Vivek Srikumar},
+      year={2024},
+      eprint={2401.06877},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+```
