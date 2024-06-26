@@ -104,12 +104,21 @@ In addition, we have added two flags: `read_generated` and `read_inferences`. Wh
 ---
 ### Cite Us
 ```bibtex
-@misc{mehta2024promptly,
-      title={Promptly Predicting Structures: The Return of Inference}, 
-      author={Maitrey Mehta and Valentina Pyatkin and Vivek Srikumar},
-      year={2024},
-      eprint={2401.06877},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+@inproceedings{mehta-etal-2024-promptly,
+    title = "Promptly Predicting Structures: The Return of Inference",
+    author = "Mehta, Maitrey  and
+      Pyatkin, Valentina  and
+      Srikumar, Vivek",
+    editor = "Duh, Kevin  and
+      Gomez, Helena  and
+      Bethard, Steven",
+    booktitle = "Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)",
+    month = jun,
+    year = "2024",
+    address = "Mexico City, Mexico",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.naacl-long.7",
+    pages = "112--130",
 }
+
 ```
